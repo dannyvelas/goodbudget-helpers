@@ -47,7 +47,7 @@ def sort_txns(file_name: str, regex: str, indices: Tuple):
                 date_ts = dt.strptime(split[0], "%m/%d/%Y").timestamp()
                 txn = [date_ts, *split]
 
-                txn[2] = re.sub(r'\s+', ' ', txn[2])
+                txn[2] = re.sub(r'\s+', ' ', txn[2]).replace('"', '')
                 txn[3] = float(txn[3].replace('"', '').replace(",", ''))
 
                 txns.append(txn)
@@ -114,7 +114,7 @@ while gb_i < len(gb_sorted):
     gb_only.append(gb_sorted[gb_i])
     gb_i += 1
 
-# remove charges that were offset with a refund
+# remove chase charges that were offset with a refund
 charges_seen = {}
 i = 0
 while i < len(ch_only):
@@ -131,10 +131,12 @@ while i < len(ch_only):
     else:
         i += 1
 
+# sort by date
 ch_only = sorted(ch_only, key=lambda x: x[0])
 gb_only = sorted(gb_only, key=lambda x: x[0])
 matched = sorted(matched, key=lambda x: x[0][0])
 
+# print to file
 txns_to_file(CH_ONLY_FILE_NAME, ch_only)
 txns_to_file(GB_ONLY_FILE_NAME, gb_only)
 txns_to_file(MATCHED_FILE_NAME, matched)
