@@ -50,10 +50,11 @@ class SingleTxn:
         self.date = date
         self.title = title
         self.amt = amt
-        self.bal = -1
+        self.bal = 0
 
     def to_row(self) -> str:
-        return ','.join([str(value) for key, value in vars(self).items() if key != 'ts'])
+        as_dollars = dict(vars(self), amt=self.amt / 10, bal=self.bal/10)
+        return ','.join([str(value) for key, value in as_dollars.items() if key != 'ts'])
 
 
 class MergedTxn:
