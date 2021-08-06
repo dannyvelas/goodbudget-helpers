@@ -31,13 +31,13 @@ GB_SORTED_FILE = './out/sorted/goodbudget.csv'
 ##############################################################################
 
 ##### MATCHED OUTPUT #########################################################
-CH_ONLY_FILE = './out/matched/chase_only.csv'
-GB_ONLY_FILE = './out/matched/goodbudget_only.csv'
-MATCHED_FILE = './out/matched/matched.csv'
+MERGED_FILE = './out/merged/merged.csv'
+CH_ONLY_FILE = './out/merged/chase_only.csv'
+GB_ONLY_FILE = './out/merged/goodbudget_only.csv'
+BOTH_ONLY_FILE = './out/merged/both_only.csv'
 ##############################################################################
 
 
-# Types
 class TxnType(Enum):
     CHASE = 'ch'
     GOODBUDGET = 'gb'
@@ -108,7 +108,7 @@ def read_txns(file_name: str, regex: Pattern) -> List[SingleTxn]:
     return txns
 
 
-def txns_to_file(file_name: str, txns: Union[List[SingleTxn], List[MergedTxn]]) -> None:
+def txns_to_file(file_name: str, txns: Union[List[SingleTxn], List[MergedTxn]]):
     with open(file_name, 'w') as out_file:
         for txn in txns:
             out_file.write(f"{txn.to_row()}\n")
@@ -126,7 +126,7 @@ gb_txns = sorted(gb_txns, key=attrgetter('amt', 'ts', 'title'))
 txns_to_file(CH_SORTED_FILE, ch_txns)
 txns_to_file(GB_SORTED_FILE, gb_txns)
 
-# merge chase txns to gb txns
+# merge chase txns and gb txns
 merged_txns: List[MergedTxn] = []
 ch_i, gb_i = 0, 0
 while ch_i < len(ch_txns) or gb_i < len(gb_txns):
@@ -167,5 +167,11 @@ for merged_txn in merged_txns:
     if ch_bal == gb_bal:
         merged_txn.special = True
 
-# print to file
-txns_to_file(MATCHED_FILE, merged_txns)
+# print to files
+txns_to_file(MERGED_FILE, merged_txns)
+txns_to_file(CH_ONLY_FILE,
+             [x for x in merged_txns if x.type_ == TxnType.CHASE])
+txns_to_file(GB_ONLY_FILE,
+             [x for x in merged_txns if x.type_ == TxnType.GOODBUDGET])
+txns_to_file(BOTH_ONLY_FILE,
+             [x for x in merged_txns if x.type_ == TxnType.BOTH])
