@@ -3,6 +3,7 @@ from datetime import datetime as dt
 from typing import Union, List
 from re import Pattern
 from enum import Enum
+from pathlib import Path
 import re
 import sys
 
@@ -29,10 +30,12 @@ CH_SORTED_FILE = './out/sorted/chase.csv'
 GB_SORTED_FILE = './out/sorted/goodbudget.csv'
 ##############################################################################
 
-OUT_DIR = sys.argv[2] \
-    if len(sys.argv) > 2 and sys.argv[1] == '--test' else 'merged'
+##### OUTPUT #################################################################
+OUT_DIR = 'merged'
+if len(sys.argv) > 2 and sys.argv[1] == '--dir':
+    OUT_DIR = sys.argv[2]
+    Path(f'./out/{OUT_DIR}').mkdir(exist_ok=True)
 
-##### MATCHED OUTPUT #########################################################
 MERGED_FILE = f'./out/{OUT_DIR}/merged.csv'
 CH_ONLY_FILE = f'./out/{OUT_DIR}/chase_only.csv'
 GB_ONLY_FILE = f'./out/{OUT_DIR}/goodbudget_only.csv'
