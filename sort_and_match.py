@@ -146,7 +146,7 @@ while ch_i < len(ch_txns) or gb_i < len(gb_txns):
     ch_txn = ch_txns[ch_i] if ch_i < len(ch_txns) else None
     gb_txn = gb_txns[gb_i] if gb_i < len(gb_txns) else None
 
-    days_apart = abs((gb_txn._ts - ch_txn._ts) / (60 * 60 * 24)) \
+    days_apart = ((gb_txn._ts - ch_txn._ts) / (60 * 60 * 24)) \
         if ch_txn and gb_txn else None
 
     if (ch_txn and gb_txn and ch_txn.amt < gb_txn.amt) or (ch_txn and gb_txn is None):
@@ -157,12 +157,17 @@ while ch_i < len(ch_txns) or gb_i < len(gb_txns):
         gb_i += 1
     else:
         assert ch_txn and gb_txn and ch_txn.amt == gb_txn.amt
-        if days_apart < 7:
+        if days_apart < -7:
+            # if gb too far in past, add it by itself
+            merged_txns.append(MergedTxn(gb_txn))
+            gb_i += 1
+        elif days_apart > 7:
+            # if ch too far in past, add it by itself
+            merged_txns.append(MergedTxn(ch_txn))
+            ch_i += 1
+        else:
             merged_txns.append(MergedTxn(ch_txn, gb_txn))
             ch_i += 1
-            gb_i += 1
-        else:
-            merged_txns.append(MergedTxn(gb_txn))
             gb_i += 1
 
 # sort by date
