@@ -46,9 +46,9 @@ class TxnType(Enum):
 
 
 class SingleTxn:
-    def __init__(self, _type: TxnType, ts: int, date: str, title: str, amt: int):
+    def __init__(self, _type: TxnType, _ts: int, date: str, title: str, amt: int):
         self._type = _type
-        self.ts = ts
+        self._ts = _ts
         self.date = date
         self.title = title
         self.amt = amt
@@ -56,7 +56,7 @@ class SingleTxn:
 
     def to_row(self) -> str:
         cents_as_dollars = dict(vars(self), amt=self.amt/100, bal=self.bal/100)
-        return ','.join([str(value) for key, value in cents_as_dollars.items() if key != 'ts'])
+        return ','.join([str(value) for key, value in cents_as_dollars.items() if key[0] != '_'])
 
 
 class MergedTxn:
@@ -76,15 +76,15 @@ class MergedTxn:
 
     def get_ts(self) -> int:
         if self.type_ in [TxnType.BOTH, TxnType.CHASE]:
-            return self.ch_txn.ts
+            return self.ch_txn._ts
         else:
-            return self.gb_txn.ts
+            return self.gb_txn._ts
 
     def to_row(self) -> str:
         ch_row = self.ch_txn.to_row() \
-            if hasattr(self, 'ch_txn') else ','.join(['' for _ in range(len(vars(self.gb_txn))-1)])
+            if hasattr(self, 'ch_txn') else ','.join(['' for key in vars(self.gb_txn) if key[0] != '_'])
         gb_row = self.gb_txn.to_row() \
-            if hasattr(self, 'gb_txn') else ','.join(['' for _ in range(len(vars(self.ch_txn))-1)])
+            if hasattr(self, 'gb_txn') else ','.join(['' for key in vars(self.ch_txn) if key[0] != '_'])
 
         return ','.join([self.type_.name, ch_row, gb_row, str(self.special)])
 
@@ -95,11 +95,12 @@ def read_txns(file_name: str, regex: Pattern, txn_type: TxnType) -> List[SingleT
         amt_unmatched = 0
         for line in in_file:
             if (txn := regex.match(line)) and (txn := txn.groupdict()):
-                txn_amt = int(txn['amt']
-                              .replace('"', '').replace(",", '').replace(".", ''))
+                txn_amt = float(txn['amt'].replace('"', '').replace(",", ''))
+                txn_amt = int(txn_amt * 100)
+
                 txns.append(SingleTxn(**{
                     '_type': txn_type,
-                    'ts': int(dt.strptime(txn['date'], "%m/%d/%Y").timestamp()),
+                    '_ts': int(dt.strptime(txn['date'], "%m/%d/%Y").timestamp()),
                     'date': txn['date'],
                     'title':  re.sub(r'\s+', ' ', txn['title']),
                     'amt': txn_amt,
@@ -124,8 +125,8 @@ ch_txns: List[SingleTxn] = read_txns(CH_FILE, CH_REGEX, TxnType.CHASE)
 gb_txns: List[SingleTxn] = read_txns(GB_FILE, GB_REGEX, TxnType.GOODBUDGET)
 
 # sort by amount
-ch_txns = sorted(ch_txns, key=attrgetter('amt', 'ts', 'title'))
-gb_txns = sorted(gb_txns, key=attrgetter('amt', 'ts', 'title'))
+ch_txns = sorted(ch_txns, key=attrgetter('amt', '_ts', 'title'))
+gb_txns = sorted(gb_txns, key=attrgetter('amt', '_ts', 'title'))
 
 # print sorted txns to file for debugging
 txns_to_file(CH_SORTED_FILE, ch_txns)
@@ -138,7 +139,7 @@ while ch_i < len(ch_txns) or gb_i < len(gb_txns):
     ch_txn = ch_txns[ch_i] if ch_i < len(ch_txns) else None
     gb_txn = gb_txns[gb_i] if gb_i < len(gb_txns) else None
 
-    days_apart = abs((gb_txn.ts - ch_txn.ts) / (60 * 60 * 24)) \
+    days_apart = abs((gb_txn._ts - ch_txn._ts) / (60 * 60 * 24)) \
         if ch_txn and gb_txn else None
 
     if (ch_txn and gb_txn and ch_txn.amt < gb_txn.amt) or (ch_txn and gb_txn is None):
@@ -179,7 +180,6 @@ txns_to_file(CH_ONLY_FILE, only_ch_txns)
 txns_to_file(GB_ONLY_FILE, only_gb_txns)
 txns_to_file(BOTH_ONLY_FILE, only_both_txns)
 
-print(f'AMT OF ALL TXNS: {len(merged_txns)}')
 print(f'AMT OF UNMATCHED CHASE TXNS: {len(only_ch_txns)}')
 print(f'AMT OF UNMATCHED GOODBUDGET TXNS: {len(only_gb_txns)}')
 print(f'AMT OF MATCHED TXNS: {len(only_both_txns)}')
