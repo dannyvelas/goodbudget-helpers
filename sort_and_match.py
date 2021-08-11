@@ -102,8 +102,8 @@ def read_txns(file_name: str, regex: Pattern, txn_type: TxnType) -> List[SingleT
         amt_unmatched = 0
         for line in in_file:
             if (txn := regex.match(line)) and (txn := txn.groupdict()):
-                txn_amt = float(txn['amt'].replace('"', '').replace(",", ''))
-                txn_amt = int(txn_amt * 100)
+                txn_amt = int(txn['amt']
+                              .replace('"', '').replace(",", '').replace(".", ''))
 
                 txns.append(SingleTxn(**{
                     '_type': txn_type,
