@@ -29,7 +29,8 @@ CH_SORTED_FILE = './out/sorted/chase.csv'
 GB_SORTED_FILE = './out/sorted/goodbudget.csv'
 ##############################################################################
 
-OUT_DIR = 'test' if len(sys.argv) > 1 and sys.argv[1] == '--test' else 'merged'
+OUT_DIR = sys.argv[2] \
+    if len(sys.argv) > 2 and sys.argv[1] == '--test' else 'merged'
 
 ##### MATCHED OUTPUT #########################################################
 MERGED_FILE = f'./out/{OUT_DIR}/merged.csv'
@@ -54,11 +55,11 @@ class SingleTxn:
         self.amt = amt
         self.bal = 0
 
-    def as_dict(self):
+    def to_dict(self):
         return {key: value for key, value in vars(self).items() if key[0] != '_'}
 
     def to_row(self) -> str:
-        dollars_dict = dict(self.as_dict(), amt=self.amt/100, bal=self.bal/100)
+        dollars_dict = dict(self.to_dict(), amt=self.amt/100, bal=self.bal/100)
         return ','.join([str(value) for value in dollars_dict.values()])
 
 
@@ -85,9 +86,9 @@ class MergedTxn:
 
     def to_row(self) -> str:
         ch_row = self.ch_txn.to_row() \
-            if hasattr(self, 'ch_txn') else ',' * (len(gb_txn.as_dict())-1)
+            if hasattr(self, 'ch_txn') else ',' * (len(self.gb_txn.to_dict())-1)
         gb_row = self.gb_txn.to_row() \
-            if hasattr(self, 'gb_txn') else ',' * (len(ch_txn.as_dict())-1)
+            if hasattr(self, 'gb_txn') else ',' * (len(self.ch_txn.to_dict())-1)
 
         return ','.join([self.type_.name, ch_row, gb_row, str(self.special)])
 
