@@ -153,7 +153,10 @@ while ch_i < len(ch_txns) or gb_i < len(gb_txns):
         if days_apart < 7:
             merged_txns.append(MergedTxn(ch_txn, gb_txn))
             ch_i += 1
-        gb_i += 1
+            gb_i += 1
+        else:
+            merged_txns.append(MergedTxn(gb_txn))
+            gb_i += 1
 
 # sort by date
 merged_txns = sorted(merged_txns, key=lambda x: x.get_ts())
@@ -169,7 +172,6 @@ for merged_txn in merged_txns:
         merged_txn.gb_txn.bal = gb_bal
     if ch_bal == gb_bal:
         merged_txn.special = True
-
 
 only_ch_txns = [x for x in merged_txns if x.type_ == TxnType.CHASE]
 only_gb_txns = [x for x in merged_txns if x.type_ == TxnType.GOODBUDGET]
