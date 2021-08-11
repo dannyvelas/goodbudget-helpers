@@ -54,9 +54,12 @@ class SingleTxn:
         self.amt = amt
         self.bal = 0
 
+    def as_dict(self):
+        return {key: value for key, value in vars(self).items() if key[0] != '_'}
+
     def to_row(self) -> str:
-        cents_as_dollars = dict(vars(self), amt=self.amt/100, bal=self.bal/100)
-        return ','.join([str(value) for key, value in cents_as_dollars.items() if key[0] != '_'])
+        dollars_dict = dict(self.as_dict(), amt=self.amt/100, bal=self.bal/100)
+        return ','.join([str(value) for value in dollars_dict.values()])
 
 
 class MergedTxn:
@@ -68,9 +71,9 @@ class MergedTxn:
         for txn in [txn_1, txn_2]:
             if txn:
                 if txn._type == TxnType.CHASE:
-                    self.ch_txn = txn
+                    self.ch_txn: SingleTxn = txn
                 elif txn._type == TxnType.GOODBUDGET:
-                    self.gb_txn = txn
+                    self.gb_txn: SingleTxn = txn
 
         self.special = False
 
@@ -82,9 +85,9 @@ class MergedTxn:
 
     def to_row(self) -> str:
         ch_row = self.ch_txn.to_row() \
-            if hasattr(self, 'ch_txn') else ','.join(['' for key in vars(self.gb_txn) if key[0] != '_'])
+            if hasattr(self, 'ch_txn') else ',' * (len(gb_txn.as_dict())-1)
         gb_row = self.gb_txn.to_row() \
-            if hasattr(self, 'gb_txn') else ','.join(['' for key in vars(self.ch_txn) if key[0] != '_'])
+            if hasattr(self, 'gb_txn') else ',' * (len(ch_txn.as_dict())-1)
 
         return ','.join([self.type_.name, ch_row, gb_row, str(self.special)])
 
