@@ -9,7 +9,7 @@ import sys
 
 ##### CHASE ##################################################################
 CH_FILE = './in/chase.csv'
-CH_START_BAL = 362335
+CH_START_BAL = 365435
 
 # COLUMNS =  debit/credit   date                        title              amt                      type      balance
 CH_REGEX = r'(DEBIT|CREDIT),(?P<date>\d\d\/\d\d\/\d{4}),(?P<title>"[^"]+"),(?P<amt>-?\d{1,4}\.\d\d),([A-Z_]+),(-?\d{1,4}.\d\d),,'
@@ -31,16 +31,16 @@ GB_SORTED_FILE = './out/sorted/goodbudget.csv'
 ##############################################################################
 
 ##### OUTPUT #################################################################
-OUT_DIR = 'merged'
-if len(sys.argv) > 2 and sys.argv[1] == '--dir':
-    OUT_DIR = sys.argv[2]
-    Path(f'./out/{OUT_DIR}').mkdir(exist_ok=True)
+OUT_DIR = sys.argv[2] \
+    if len(sys.argv) > 2 and sys.argv[1] == '--dir' else './out/merged/'
 
-MERGED_FILE = f'./out/{OUT_DIR}/merged.csv'
-CH_ONLY_FILE = f'./out/{OUT_DIR}/chase_only.csv'
-GB_ONLY_FILE = f'./out/{OUT_DIR}/goodbudget_only.csv'
-BOTH_ONLY_FILE = f'./out/{OUT_DIR}/both_only.csv'
-BAL_FREQ_FILE = f'./out/{OUT_DIR}/bal_freq.csv'
+Path(OUT_DIR).mkdir(exist_ok=True)
+
+MERGED_FILE = f'{OUT_DIR}/merged.csv'
+CH_ONLY_FILE = f'{OUT_DIR}/chase_only.csv'
+GB_ONLY_FILE = f'{OUT_DIR}/goodbudget_only.csv'
+BOTH_ONLY_FILE = f'{OUT_DIR}/both_only.csv'
+BAL_FREQ_FILE = f'{OUT_DIR}/bal_freq.csv'
 ##############################################################################
 
 
@@ -171,6 +171,30 @@ while ch_i < len(ch_txns) or gb_i < len(gb_txns):
             ch_i += 1
             gb_i += 1
 
+# remove ch_only txns that were never on gb bc they were offset by a refund
+merged_txns_dict = dict(enumerate(merged_txns))
+charges_seen: Dict[int, int] = {}
+amt_removed = 0
+i = 0
+while i in merged_txns_dict:
+    if merged_txns_dict[i].type_ == TxnType.CHASE:
+        ch_txn = merged_txns_dict[i].ch_txn
+
+        if ch_txn.amt < 0:
+            charges_seen[ch_txn.amt] = i
+        elif ch_txn.amt > 0 and -ch_txn.amt in charges_seen:
+            neg_to_del = merged_txns_dict[charges_seen[-ch_txn.amt]].ch_txn
+            should_del = input(
+                f"Remove {neg_to_del.to_row()} and {ch_txn.to_row()}?: (yes) ")
+            if not should_del or should_del.lower() in ['y', 'yes']:
+                del merged_txns_dict[charges_seen[-ch_txn.amt]]
+                del merged_txns_dict[i]
+                del charges_seen[-ch_txn.amt]
+                amt_removed += 1
+    i += 1
+print(f'\nAMT REMOVED: {amt_removed}')
+merged_txns = list(merged_txns_dict.values())
+
 # sort by date
 merged_txns = sorted(merged_txns, key=lambda x: x.get_ts())
 
@@ -193,22 +217,27 @@ for merged_txn in merged_txns:
 
     merged_txn.bal_diff = diff
 
+# sort by balance differences that occur the most
 bal_diff_freq = dict(sorted(bal_diff_freq.items(),
                             key=lambda item: item[1], reverse=True))
 
+# split merged_txns into 3 different lists
 only_ch_txns = [x for x in merged_txns if x.type_ == TxnType.CHASE]
 only_gb_txns = [x for x in merged_txns if x.type_ == TxnType.GOODBUDGET]
 only_both_txns = [x for x in merged_txns if x.type_ == TxnType.BOTH]
 
+# print each list to a file
 txns_to_file(MERGED_FILE, merged_txns)
 txns_to_file(CH_ONLY_FILE, only_ch_txns)
 txns_to_file(GB_ONLY_FILE, only_gb_txns)
 txns_to_file(BOTH_ONLY_FILE, only_both_txns)
 
+# print the sorted balance differences
 with open(BAL_FREQ_FILE, 'w') as out_file:
     for key, value in bal_diff_freq.items():
         out_file.write(f'{key / 100}, {value}\n')
 
+# print some helpful numbers
 print(f'AMT OF UNMATCHED CHASE TXNS: {len(only_ch_txns)}')
 print(f'AMT OF UNMATCHED GOODBUDGET TXNS: {len(only_gb_txns)}')
 print(f'AMT OF MATCHED TXNS: {len(only_both_txns)}')
