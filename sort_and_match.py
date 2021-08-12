@@ -1,6 +1,6 @@
 from operator import attrgetter
 from datetime import datetime as dt
-from typing import Union, List
+from typing import Union, List, Dict
 from re import Pattern
 from enum import Enum
 from pathlib import Path
@@ -40,6 +40,7 @@ MERGED_FILE = f'./out/{OUT_DIR}/merged.csv'
 CH_ONLY_FILE = f'./out/{OUT_DIR}/chase_only.csv'
 GB_ONLY_FILE = f'./out/{OUT_DIR}/goodbudget_only.csv'
 BOTH_ONLY_FILE = f'./out/{OUT_DIR}/both_only.csv'
+BAL_FREQ_FILE = f'./out/{OUT_DIR}/bal_freq.csv'
 ##############################################################################
 
 
@@ -79,7 +80,7 @@ class MergedTxn:
                 elif txn._type == TxnType.GOODBUDGET:
                     self.gb_txn: SingleTxn = txn
 
-        self.special = False
+        self.bal_diff = 0
 
     def get_ts(self) -> int:
         if self.type_ in [TxnType.BOTH, TxnType.CHASE]:
@@ -93,7 +94,7 @@ class MergedTxn:
         gb_row = self.gb_txn.to_row() \
             if hasattr(self, 'gb_txn') else ',' * (len(self.ch_txn.to_dict())-1)
 
-        return ','.join([self.type_.name, ch_row, gb_row, str(self.special)])
+        return ','.join([self.type_.name, ch_row, gb_row, str(self.bal_diff / 100)])
 
 
 def read_txns(file_name: str, regex: Pattern, txn_type: TxnType) -> List[SingleTxn]:
@@ -173,7 +174,8 @@ while ch_i < len(ch_txns) or gb_i < len(gb_txns):
 # sort by date
 merged_txns = sorted(merged_txns, key=lambda x: x.get_ts())
 
-# set balances and mark when balances are equal to eachother
+# set SingleTxn.bal and MergedTxn.bal_diff
+bal_diff_freq: Dict[int, int] = {}
 ch_bal, gb_bal = CH_START_BAL, GB_START_BAL
 for merged_txn in merged_txns:
     if merged_txn.type_ in [TxnType.CHASE, TxnType.BOTH]:
@@ -182,8 +184,17 @@ for merged_txn in merged_txns:
     if merged_txn.type_ in [TxnType.GOODBUDGET, TxnType.BOTH]:
         gb_bal += merged_txn.gb_txn.amt
         merged_txn.gb_txn.bal = gb_bal
-    if ch_bal == gb_bal:
-        merged_txn.special = True
+
+    diff = ch_bal - gb_bal
+    if diff in bal_diff_freq:
+        bal_diff_freq[diff] += 1
+    else:
+        bal_diff_freq[diff] = 1
+
+    merged_txn.bal_diff = diff
+
+bal_diff_freq = dict(sorted(bal_diff_freq.items(),
+                            key=lambda item: item[1], reverse=True))
 
 only_ch_txns = [x for x in merged_txns if x.type_ == TxnType.CHASE]
 only_gb_txns = [x for x in merged_txns if x.type_ == TxnType.GOODBUDGET]
@@ -193,6 +204,10 @@ txns_to_file(MERGED_FILE, merged_txns)
 txns_to_file(CH_ONLY_FILE, only_ch_txns)
 txns_to_file(GB_ONLY_FILE, only_gb_txns)
 txns_to_file(BOTH_ONLY_FILE, only_both_txns)
+
+with open(BAL_FREQ_FILE, 'w') as out_file:
+    for key, value in bal_diff_freq.items():
+        out_file.write(f'{key / 100}, {value}\n')
 
 print(f'AMT OF UNMATCHED CHASE TXNS: {len(only_ch_txns)}')
 print(f'AMT OF UNMATCHED GOODBUDGET TXNS: {len(only_gb_txns)}')
