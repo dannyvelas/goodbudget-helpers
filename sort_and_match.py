@@ -9,7 +9,7 @@ import sys
 
 ##### CHASE ##################################################################
 CH_FILE = './in/chase.csv'
-CH_START_BAL = 365435
+CH_START_BAL = 362335
 
 # COLUMNS =  debit/credit   date                        title              amt                      type      balance
 CH_REGEX = r'(DEBIT|CREDIT),(?P<date>\d\d\/\d\d\/\d{4}),(?P<title>"[^"]+"),(?P<amt>-?\d{1,4}\.\d\d),([A-Z_]+),(-?\d{1,4}.\d\d),,'
@@ -103,15 +103,12 @@ def read_txns(file_name: str, regex: Pattern, txn_type: TxnType) -> List[SingleT
         amt_unmatched = 0
         for line in in_file:
             if (txn := regex.match(line)) and (txn := txn.groupdict()):
-                txn_amt = int(txn['amt']
-                              .replace('"', '').replace(",", '').replace(".", ''))
-
                 txns.append(SingleTxn(**{
                     '_type': txn_type,
                     '_ts': int(dt.strptime(txn['date'], "%m/%d/%Y").timestamp()),
                     'date': txn['date'],
                     'title':  re.sub(r'\s+', ' ', txn['title']),
-                    'amt': txn_amt,
+                    'amt': int(txn['amt'].replace('"', '').replace(",", '').replace(".", ''))
                 }))
             else:
                 amt_unmatched += 1
@@ -190,7 +187,7 @@ while i in merged_txns_dict:
                 del merged_txns_dict[charges_seen[-ch_txn.amt]]
                 del merged_txns_dict[i]
                 del charges_seen[-ch_txn.amt]
-                amt_removed += 1
+                amt_removed += 2
     i += 1
 print(f'\nAMT REMOVED: {amt_removed}')
 merged_txns = list(merged_txns_dict.values())
