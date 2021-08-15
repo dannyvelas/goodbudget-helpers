@@ -1,6 +1,6 @@
 from operator import attrgetter
 from datetime import datetime as dt
-from typing import Union, List, Dict
+from typing import Union, List, Dict, Tuple
 from re import Pattern
 from enum import Enum
 from pathlib import Path
@@ -82,11 +82,12 @@ class MergedTxn:
 
         self.bal_diff = 0
 
-    def get_ts(self) -> int:
-        if self.type_ in [TxnType.BOTH, TxnType.CHASE]:
-            return self.ch_txn._ts
+    def to_ts_and_title_tuple(self) -> Union[Tuple[int, int, str, str], Tuple[int, int, str]]:
+        if self.type_ == TxnType.BOTH:
+            return (self.ch_txn._ts, self.gb_txn._ts, ch_txn.title, gb_txn.title)
         else:
-            return self.gb_txn._ts
+            my_txn = self.ch_txn if self.type_ == TxnType.CHASE else self.gb_txn
+            return (my_txn._ts, 0, my_txn.title)
 
     def to_row(self) -> str:
         ch_row = self.ch_txn.to_row() \
@@ -193,7 +194,7 @@ print(f'\nAMT REMOVED: {amt_removed}')
 merged_txns = list(merged_txns_dict.values())
 
 # sort by date
-merged_txns = sorted(merged_txns, key=lambda x: x.get_ts())
+merged_txns = sorted(merged_txns, key=lambda x: x.to_ts_and_title_tuple())
 
 # set SingleTxn.bal and MergedTxn.bal_diff
 bal_diff_freq: Dict[int, int] = {}
@@ -219,8 +220,8 @@ bal_diff_freq = dict(sorted(bal_diff_freq.items(),
                             key=lambda item: item[1], reverse=True))
 
 # split merged_txns into 3 different lists
-only_ch_txns = [x for x in merged_txns if x.type_ == TxnType.CHASE]
-only_gb_txns = [x for x in merged_txns if x.type_ == TxnType.GOODBUDGET]
+only_ch_txns = [x.ch_txn for x in merged_txns if x.type_ == TxnType.CHASE]
+only_gb_txns = [x.gb_txn for x in merged_txns if x.type_ == TxnType.GOODBUDGET]
 only_both_txns = [x for x in merged_txns if x.type_ == TxnType.BOTH]
 
 # print each list to a file
