@@ -104,11 +104,15 @@ def read_txns(file_name: str, regex: Pattern, txn_type: TxnType) -> List[SingleT
         amt_unmatched = 0
         for line in in_file:
             if (txn := regex.match(line)) and (txn := txn.groupdict()):
+                txn_title = re.sub(r'\s+', ' ', txn['title'])[0:26]
+                if ' ' in txn_title and txn_title[-1] != '"':
+                    txn_title += '"'
+
                 txns.append(SingleTxn(**{
                     '_type': txn_type,
                     '_ts': int(dt.strptime(txn['date'], "%m/%d/%Y").timestamp()),
                     'date': txn['date'],
-                    'title':  re.sub(r'\s+', ' ', txn['title']),
+                    'title':  txn_title,
                     'amt': int(txn['amt'].replace('"', '').replace(",", '').replace(".", ''))
                 }))
             else:
