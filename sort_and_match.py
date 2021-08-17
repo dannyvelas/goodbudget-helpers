@@ -25,11 +25,6 @@ GB_REGEX = r"""(?P<date>\d\d\/\d\d\/\d{4}),("[^"]+"|[A-Za-z]*|\[Unallocated\]),"
 GB_REGEX = re.compile(GB_REGEX)
 ##############################################################################
 
-##### SORTED OUTPUT ##########################################################
-CH_SORTED_FILE = './out/sorted/chase.csv'
-GB_SORTED_FILE = './out/sorted/goodbudget.csv'
-##############################################################################
-
 ##### OUTPUT #################################################################
 OUT_DIR = sys.argv[2] \
     if len(sys.argv) > 2 and sys.argv[1] == '--dir' else './out/merged/'
@@ -138,10 +133,6 @@ gb_txns: List[SingleTxn] = read_txns(GB_FILE, GB_REGEX, TxnType.GOODBUDGET)
 ch_txns = sorted(ch_txns, key=attrgetter('amt', '_ts', 'title'))
 gb_txns = sorted(gb_txns, key=attrgetter('amt', '_ts', 'title'))
 
-# print sorted txns to file for debugging
-txns_to_file(CH_SORTED_FILE, ch_txns)
-txns_to_file(GB_SORTED_FILE, gb_txns)
-
 # merge chase txns and gb txns
 merged_txns: List[MergedTxn] = []
 ch_i, gb_i = 0, 0
@@ -194,7 +185,6 @@ while i in merged_txns_dict:
                 del charges_seen[-ch_txn.amt]
                 amt_removed += 2
     i += 1
-print(f'\nAMT REMOVED: {amt_removed}')
 merged_txns = list(merged_txns_dict.values())
 
 # sort by date
@@ -224,9 +214,16 @@ bal_diff_freq = dict(sorted(bal_diff_freq.items(),
                             key=lambda item: item[1], reverse=True))
 
 # split merged_txns into 3 different lists
-only_ch_txns = [x.ch_txn for x in merged_txns if x.type_ == TxnType.CHASE]
-only_gb_txns = [x.gb_txn for x in merged_txns if x.type_ == TxnType.GOODBUDGET]
-only_both_txns = [x for x in merged_txns if x.type_ == TxnType.BOTH]
+only_ch_txns: List[SingleTxn] = []
+only_gb_txns: List[SingleTxn] = []
+only_both_txns: List[MergedTxn] = []
+for txn in merged_txns:
+    if txn.type_ == TxnType.CHASE:
+        only_ch_txns.append(txn.ch_txn)
+    elif txn.type_ == TxnType.GOODBUDGET:
+        only_gb_txns.append(txn.gb_txn)
+    else:
+        only_both_txns.append(txn)
 
 # print each list to a file
 txns_to_file(MERGED_FILE, merged_txns)
@@ -240,6 +237,7 @@ with open(BAL_FREQ_FILE, 'w') as out_file:
         out_file.write(f'{key / 100}, {value}\n')
 
 # print some helpful numbers
+print(f'\nAMT REMOVED: {amt_removed}')
 print(f'AMT OF UNMATCHED CHASE TXNS: {len(only_ch_txns)}')
 print(f'AMT OF UNMATCHED GOODBUDGET TXNS: {len(only_gb_txns)}')
 print(f'AMT OF MATCHED TXNS: {len(only_both_txns)}')
