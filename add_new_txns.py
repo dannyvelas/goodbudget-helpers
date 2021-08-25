@@ -1,12 +1,13 @@
+import readline
+from typing import List
+
+from dotenv import dotenv_values
+from selenium.webdriver import Chrome
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.select import Select
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver import Chrome
-from dotenv import dotenv_values
-from match import only_both_txns
-from match import only_ch_txns
-from typing import List
-import readline
+
+from match import organize_txns
 ENV = dotenv_values(".env")
 
 ##### READLINE CONFIG ########################################################
@@ -121,15 +122,17 @@ def is_correct_match(matched_txn: MatchedTxn):
     answer = input('\tIs this correct? (yes): ')
     return not answer or answer.lower() in ['y', 'yes']
 
-
-Driver.login()
+organized_txns = organize_txns()
+chase_txns, both_txns = organized_txns.ch_txns, organized_txns.both_txns
 
 # read txns
-new_ch_txns: List[ChaseTxn] = [ChaseTxn(x._is_debit, x.date, x.title, str(abs(x.amt)/100)) for x in only_ch_txns]
-matched_txns: List[MatchedTxn] = [MatchedTxn(x.ch_txn.title, x.gb_txn.title, x.gb_txn.envelope) for x in only_both_txns]
+new_ch_txns: List[ChaseTxn] = [ChaseTxn(x._is_debit, x.date, x.title, str(abs(x.amt)/100)) for x in chase_txns]
+matched_txns: List[MatchedTxn] = [MatchedTxn(x.ch_txn.title, x.gb_txn.title, x.gb_txn.envelope) for x in both_txns]
 
 # reverse new_ch_txns to go from past to present
 new_ch_txns.reverse()
+
+Driver.login()
 
 # make list of txns to add
 for new_ch_txn in new_ch_txns:
