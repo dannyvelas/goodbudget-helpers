@@ -8,7 +8,7 @@ import sys
 from typing import Dict, List, Tuple, Union
 
 ##### CHASE ##################################################################
-CH_FILE = './in/chase.csv'
+IN_CH_FILE = './in/chase.csv'
 CH_START_BAL = 362335
 
 # COLUMNS =      debit/credit                  date                        title              amt                      type      balance
@@ -17,7 +17,7 @@ CH_REGEX = re.compile(CH_REGEX_STR)
 ##############################################################################
 
 ##### GOODBUDGET #############################################################
-GB_FILE = './in/goodbudget.csv'
+IN_GB_FILE = './in/goodbudget.csv'
 GB_START_BAL = 0
 
 # COLUMNS =        date                        envelope                                        account         title                              notes                   amt                                         status details
@@ -32,8 +32,8 @@ OUT_DIR = sys.argv[2] \
 Path(OUT_DIR).mkdir(exist_ok=True)
 
 MERGED_FILE = f'{OUT_DIR}/merged.csv'
-CH_FILE = f'{OUT_DIR}/chase.csv'
-GB_FILE = f'{OUT_DIR}/goodbudget.csv'
+OUT_CH_FILE = f'{OUT_DIR}/chase.csv'
+OUT_GB_FILE = f'{OUT_DIR}/goodbudget.csv'
 BOTH_FILE = f'{OUT_DIR}/both.csv'
 BAL_FREQ_FILE = f'{OUT_DIR}/bal_freq.csv'
 ##############################################################################
@@ -167,9 +167,9 @@ def txns_to_file(file_name: str, txns: Union[List[ChaseTxn], List[GoodbudgetTxn]
 
 def organize_txns():
     # read
-    ch_txns: List[ChaseTxn] = read_txns(CH_FILE, CH_REGEX, TxnType.CHASE)
+    ch_txns: List[ChaseTxn] = read_txns(IN_CH_FILE, CH_REGEX, TxnType.CHASE)
     gb_txns: List[GoodbudgetTxn] = read_txns(
-        GB_FILE, GB_REGEX, TxnType.GOODBUDGET)
+        IN_GB_FILE, GB_REGEX, TxnType.GOODBUDGET)
 
     # sort by amount
     ch_txns = sorted(ch_txns, key=attrgetter('amt', '_ts', 'title'))
@@ -192,7 +192,7 @@ def organize_txns():
             merged_txns.append(MergedTxn(gb_txn))
             gb_i += 1
         else:
-            assert ch_txn and gb_txn and days_apart and ch_txn.amt == gb_txn.amt
+            assert ch_txn and gb_txn and days_apart is not None and ch_txn.amt == gb_txn.amt
             if days_apart < -7:
                 # if gb too far in past, add it by itself
                 merged_txns.append(MergedTxn(gb_txn))
@@ -246,8 +246,8 @@ def organize_txns():
 
     # print each list to a file
     txns_to_file(MERGED_FILE, merged_txns)
-    txns_to_file(CH_FILE, ch_txns)
-    txns_to_file(GB_FILE, gb_txns)
+    txns_to_file(OUT_CH_FILE, ch_txns)
+    txns_to_file(OUT_GB_FILE, gb_txns)
     txns_to_file(BOTH_FILE, both_txns)
 
     # print the sorted balance differences
