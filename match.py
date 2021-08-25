@@ -25,19 +25,6 @@ GB_REGEX_STR = r"""(?P<date>\d\d\/\d\d\/\d{4}),(?P<envelope>"[^"]+"|[A-Za-z]*|\[
 GB_REGEX = re.compile(GB_REGEX_STR)
 ##############################################################################
 
-##### OUTPUT #################################################################
-OUT_DIR = sys.argv[2] \
-    if len(sys.argv) > 2 and sys.argv[1] == '--dir' else './out/merged/'
-
-Path(OUT_DIR).mkdir(exist_ok=True)
-
-MERGED_FILE = f'{OUT_DIR}/merged.csv'
-OUT_CH_FILE = f'{OUT_DIR}/chase.csv'
-OUT_GB_FILE = f'{OUT_DIR}/goodbudget.csv'
-BOTH_FILE = f'{OUT_DIR}/both.csv'
-BAL_FREQ_FILE = f'{OUT_DIR}/bal_freq.csv'
-##############################################################################
-
 
 class TxnType(Enum):
     CHASE = 'ch'
@@ -165,7 +152,17 @@ def txns_to_file(file_name: str, txns: Union[List[ChaseTxn], List[GoodbudgetTxn]
             out_file.write(f"{txn.to_row()}\n")
 
 
-def organize_txns():
+def organize_txns(out_dir: str = './out/merged'):
+    ##### OUTPUT #################################################################
+    Path(out_dir).mkdir(exist_ok=True)
+
+    merged_file = f'{out_dir}/merged.csv'
+    out_ch_file = f'{out_dir}/chase.csv'
+    out_gb_file = f'{out_dir}/goodbudget.csv'
+    both_file = f'{out_dir}/both.csv'
+    bal_freq_file = f'{out_dir}/bal_freq.csv'
+    ##############################################################################
+
     # read
     ch_txns: List[ChaseTxn] = read_txns(IN_CH_FILE, CH_REGEX, TxnType.CHASE)
     gb_txns: List[GoodbudgetTxn] = read_txns(
@@ -245,13 +242,13 @@ def organize_txns():
             both_txns.append(txn)
 
     # print each list to a file
-    txns_to_file(MERGED_FILE, merged_txns)
-    txns_to_file(OUT_CH_FILE, ch_txns)
-    txns_to_file(OUT_GB_FILE, gb_txns)
-    txns_to_file(BOTH_FILE, both_txns)
+    txns_to_file(merged_file, merged_txns)
+    txns_to_file(out_ch_file, ch_txns)
+    txns_to_file(out_gb_file, gb_txns)
+    txns_to_file(both_file, both_txns)
 
     # print the sorted balance differences
-    with open(BAL_FREQ_FILE, 'w') as out_file:
+    with open(bal_freq_file, 'w') as out_file:
         for key, value in bal_diff_freq.items():
             out_file.write(f'{key / 100}, {value}\n')
 
@@ -264,4 +261,7 @@ def organize_txns():
 
 
 if __name__ == '__main__':
-    organize_txns()
+    if len(sys.argv) > 2 and sys.argv[1] == '--dir':
+        organize_txns(sys.argv[2])
+    else:
+        organize_txns()
