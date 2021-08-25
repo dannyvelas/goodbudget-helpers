@@ -81,7 +81,7 @@ class MergedTxn:
 
     def to_ts_and_title_tuple(self) -> Union[Tuple[int, int, str, str], Tuple[int, int, str]]:
         if self.type_ == TxnType.BOTH:
-            return (self.ch_txn._ts, self.gb_txn._ts, ch_txn.title, gb_txn.title)
+            return (self.ch_txn._ts, self.gb_txn._ts, self.ch_txn.title, self.gb_txn.title)
         else:
             my_txn = self.ch_txn if self.type_ == TxnType.CHASE else self.gb_txn
             return (my_txn._ts, 0, my_txn.title)
@@ -217,7 +217,6 @@ with open(BAL_FREQ_FILE, 'w') as out_file:
         out_file.write(f'{key / 100}, {value}\n')
 
 # print some helpful numbers
-print(f'\nAMT REMOVED: {amt_removed}')
 print(f'AMT OF UNMATCHED CHASE TXNS: {len(only_ch_txns)}')
 print(f'AMT OF UNMATCHED GOODBUDGET TXNS: {len(only_gb_txns)}')
 print(f'AMT OF MATCHED TXNS: {len(only_both_txns)}')
