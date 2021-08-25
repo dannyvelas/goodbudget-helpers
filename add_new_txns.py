@@ -115,7 +115,7 @@ class MatchedTxn:
         self.gb_title = gb_title
         self.gb_envelope = gb_envelope
 
-def correct_match(matched_txn: MatchedTxn):
+def is_correct_match(matched_txn: MatchedTxn):
     print(
         f'\tTitle: {matched_txn.gb_title}. Envelope: {matched_txn.gb_envelope}')
     answer = input('\tIs this correct? (yes): ')
@@ -125,7 +125,7 @@ def correct_match(matched_txn: MatchedTxn):
 Driver.login()
 
 # read txns
-new_ch_txns: List[ChaseTxn] = [ChaseTxn(x._is_debit, x.date, x.title, str(x.amt/100)) for x in only_ch_txns]
+new_ch_txns: List[ChaseTxn] = [ChaseTxn(x._is_debit, x.date, x.title, str(abs(x.amt)/100)) for x in only_ch_txns]
 matched_txns: List[MatchedTxn] = [MatchedTxn(x.ch_txn.title, x.gb_txn.title, x.gb_txn.envelope) for x in only_both_txns]
 
 # reverse new_ch_txns to go from past to present
@@ -146,10 +146,11 @@ for new_ch_txn in new_ch_txns:
                 max_eq_chars = i
                 similar_txn = matched_txn
 
+        # get info for this new txn
         while True:
             try:
                 new_gb_title, new_gb_envelope = similar_txn.gb_title, similar_txn.gb_envelope
-                if not correct_match(similar_txn):
+                if not is_correct_match(similar_txn):
                     readline.set_completer(title_completer)
                     new_gb_title = input('\tTitle: ')
 
@@ -168,6 +169,7 @@ for new_ch_txn in new_ch_txns:
                 # new line and let them re-insert the information
                 print('\n')
 
+        # run selenium code to add to GB
         if new_ch_txn.is_debit:
             Driver.add_expense(new_ch_txn.date, new_gb_title,
                                new_ch_txn.amt, new_gb_envelope, new_note)
