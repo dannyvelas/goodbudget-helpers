@@ -1,9 +1,9 @@
-from operator import attrgetter
-from datetime import datetime as dt
 from typing import Union, List, Dict, Tuple
+from datetime import datetime as dt
+from operator import attrgetter
+from pathlib import Path
 from re import Pattern
 from enum import Enum
-from pathlib import Path
 import re
 import sys
 
@@ -11,8 +11,8 @@ import sys
 CH_FILE = './in/chase.csv'
 CH_START_BAL = 362335
 
-# COLUMNS =  debit/credit   date                        title              amt                      type      balance
-CH_REGEX = r'(DEBIT|CREDIT),(?P<date>\d\d\/\d\d\/\d{4}),(?P<title>"[^"]+"),(?P<amt>-?\d{1,4}\.\d\d),([A-Z_]+),(-?\d{1,4}.\d\d),,'
+# COLUMNS =  debit/credit                  date                        title              amt                      type      balance
+CH_REGEX = r'(?P<deb_or_cred>DEBIT|CREDIT),(?P<date>\d\d\/\d\d\/\d{4}),(?P<title>"[^"]+"),(?P<amt>-?\d{1,4}\.\d\d),([A-Z_]+),(-?\d{1,4}.\d\d),,'
 CH_REGEX = re.compile(CH_REGEX)
 ##############################################################################
 
@@ -20,7 +20,7 @@ CH_REGEX = re.compile(CH_REGEX)
 GB_FILE = './in/goodbudget.csv'
 GB_START_BAL = 0
 
-# COLUMNS =    date                        envelope                            account         title                              notes                   amt                                         status details
+# COLUMNS =    date                        envelope                                        account         title                              notes                   amt                                         status details
 GB_REGEX = r"""(?P<date>\d\d\/\d\d\/\d{4}),(?P<envelope>"[^"]+"|[A-Za-z]*|\[Unallocated\]),"Chase Account",(?P<title>"[^"]+"|[A-Za-z0-9'’-]+),("[^"]+"|[A-Za-z'’-]*),,(?P<amt>-?\d{1,3}\.\d\d|"-?\d,\d{3}\.\d\d"),(CLR)?,(((\[Unallocated\]|[A-Za-z]+)\|-?\d{1,3}.\d\d)|("[^"]+"))?"""
 GB_REGEX = re.compile(GB_REGEX)
 ##############################################################################
@@ -38,21 +38,17 @@ BOTH_ONLY_FILE = f'{OUT_DIR}/both_only.csv'
 BAL_FREQ_FILE = f'{OUT_DIR}/bal_freq.csv'
 ##############################################################################
 
-
 class TxnType(Enum):
     CHASE = 'ch'
     GOODBUDGET = 'gb'
     BOTH = 'both'
 
-
-class SingleTxn:
-    def __init__(self, _type: TxnType, _ts: int, date: str, title: str, category: Union[str, None], amt: int):
-        self._type = _type
+class ChaseTxn:
+    def __init__(self, _ts: int, _is_debit: bool, date: str, title: str, amt: int):
         self._ts = _ts
+        self._is_debit = _is_debit
         self.date = date
         self.title = title
-        if category is not None:
-            self.category = category
         self.amt = amt
         self.bal = 0
 
@@ -63,19 +59,40 @@ class SingleTxn:
         dollars_dict = dict(self.to_dict(), amt=self.amt/100, bal=self.bal/100)
         return ','.join([str(value) for value in dollars_dict.values()])
 
+class GoodbudgetTxn:
+    def __init__(self, _ts: int, date: str, title: str, envelope: str, amt: int):
+        self._ts = _ts
+        self.date = date
+        self.title = title
+        self.envelope = envelope
+        self.amt = amt
+        self.bal = 0
+
+    def to_dict(self):
+        return {key: value for key, value in vars(self).items() if key[0] != '_'}
+
+    def to_row(self) -> str:
+        dollars_dict = dict(self.to_dict(), amt=self.amt/100, bal=self.bal/100)
+        return ','.join([str(value) for value in dollars_dict.values()])
 
 class MergedTxn:
-    def __init__(self, txn_1: SingleTxn, txn_2: SingleTxn = None):
-        assert txn_2 is None or txn_1._type != txn_2._type
+    def __init__(self, txn_1: Union[ChaseTxn, GoodbudgetTxn], txn_2: GoodbudgetTxn = None):
+        assert txn_2 is None or (type(txn_1) is not type(txn_2))
 
-        self.type_ = TxnType.BOTH if txn_1 and txn_2 else txn_1._type
+        if txn_1 and txn_2:
+            self.type_ = TxnType.BOTH
+        elif isinstance(txn_1, ChaseTxn):
+            self.type_ = TxnType.CHASE
+        else:
+            assert isinstance(txn_1, GoodbudgetTxn)
+            self.type_ = TxnType.GOODBUDGET
 
         for txn in [txn_1, txn_2]:
             if txn:
-                if txn._type == TxnType.CHASE:
-                    self.ch_txn: SingleTxn = txn
-                elif txn._type == TxnType.GOODBUDGET:
-                    self.gb_txn: SingleTxn = txn
+                if isinstance(txn, ChaseTxn):
+                    self.ch_txn: ChaseTxn = txn
+                elif isinstance(txn, GoodbudgetTxn):
+                    self.gb_txn: GoodbudgetTxn = txn
 
         self.bal_diff = 0
 
@@ -95,8 +112,8 @@ class MergedTxn:
         return ','.join([self.type_.name, ch_row, gb_row, str(self.bal_diff / 100)])
 
 
-def read_txns(file_name: str, regex: Pattern, txn_type: TxnType) -> List[SingleTxn]:
-    txns: List[SingleTxn] = []
+def read_txns(file_name: str, regex: Pattern, txn_type: TxnType):
+    txns = []
     with open(file_name) as in_file:
         amt_unmatched = 0
         for line in in_file:
@@ -105,14 +122,24 @@ def read_txns(file_name: str, regex: Pattern, txn_type: TxnType) -> List[SingleT
                 if ' ' in txn_title and txn_title[-1] != '"':
                     txn_title += '"'
 
-                txns.append(SingleTxn(**{
-                    '_type': txn_type,
-                    '_ts': int(dt.strptime(txn['date'], "%m/%d/%Y").timestamp()),
-                    'date': txn['date'],
-                    'title':  txn_title,
-                    'category': txn['envelope'] if txn_type == TxnType.GOODBUDGET else None,
-                    'amt': int(txn['amt'].replace('"', '').replace(",", '').replace(".", ''))
-                }))
+                if txn_type == TxnType.CHASE:
+                    new_txn =  ChaseTxn(**{
+                        '_ts': int(dt.strptime(txn['date'], "%m/%d/%Y").timestamp()),
+                        '_is_debit': txn['deb_or_cred'] == 'DEBIT',
+                        'date': txn['date'],
+                        'title':  txn_title,
+                        'amt': int(txn['amt'].replace('"', '').replace(",", '').replace(".", ''))
+                    })
+                else:
+                    new_txn = GoodbudgetTxn(**{
+                        '_ts': int(dt.strptime(txn['date'], "%m/%d/%Y").timestamp()),
+                        'date': txn['date'],
+                        'title':  txn_title,
+                        'envelope': txn['envelope'],
+                        'amt': int(txn['amt'].replace('"', '').replace(",", '').replace(".", ''))
+                    })
+
+                txns.append(new_txn)
             else:
                 amt_unmatched += 1
                 print(f'No match: {line}', end='')
@@ -122,15 +149,15 @@ def read_txns(file_name: str, regex: Pattern, txn_type: TxnType) -> List[SingleT
     return txns
 
 
-def txns_to_file(file_name: str, txns: Union[List[SingleTxn], List[MergedTxn]]):
+def txns_to_file(file_name: str, txns: Union[List[ChaseTxn], List[GoodbudgetTxn], List[MergedTxn]]):
     with open(file_name, 'w') as out_file:
         for txn in txns:
             out_file.write(f"{txn.to_row()}\n")
 
 
 # read
-ch_txns: List[SingleTxn] = read_txns(CH_FILE, CH_REGEX, TxnType.CHASE)
-gb_txns: List[SingleTxn] = read_txns(GB_FILE, GB_REGEX, TxnType.GOODBUDGET)
+ch_txns: List[ChaseTxn] = read_txns(CH_FILE, CH_REGEX, TxnType.CHASE)
+gb_txns: List[GoodbudgetTxn] = read_txns(GB_FILE, GB_REGEX, TxnType.GOODBUDGET)
 
 # sort by amount
 ch_txns = sorted(ch_txns, key=attrgetter('amt', '_ts', 'title'))
@@ -194,8 +221,8 @@ bal_diff_freq = dict(sorted(bal_diff_freq.items(),
                             key=lambda item: item[1], reverse=True))
 
 # split merged_txns into 3 different lists
-only_ch_txns: List[SingleTxn] = []
-only_gb_txns: List[SingleTxn] = []
+only_ch_txns: List[ChaseTxn] = []
+only_gb_txns: List[GoodbudgetTxn] = []
 only_both_txns: List[MergedTxn] = []
 for txn in merged_txns:
     if txn.type_ == TxnType.CHASE:
