@@ -43,7 +43,18 @@ class TxnType(Enum):
     GOODBUDGET = 'gb'
     BOTH = 'both'
 
-class ChaseTxn:
+class SingleTxn:
+    amt: int
+    bal: int
+
+    def to_dict(self):
+        return {key: value for key, value in vars(self).items() if key[0] != '_'}
+
+    def to_row(self) -> str:
+        dollars_dict = dict(self.to_dict(), amt=self.amt/100, bal=self.bal/100)
+        return ','.join([str(value) for value in dollars_dict.values()])
+
+class ChaseTxn(SingleTxn):
     def __init__(self, _ts: int, _is_debit: bool, date: str, title: str, amt: int):
         self._ts = _ts
         self._is_debit = _is_debit
@@ -52,14 +63,7 @@ class ChaseTxn:
         self.amt = amt
         self.bal = 0
 
-    def to_dict(self):
-        return {key: value for key, value in vars(self).items() if key[0] != '_'}
-
-    def to_row(self) -> str:
-        dollars_dict = dict(self.to_dict(), amt=self.amt/100, bal=self.bal/100)
-        return ','.join([str(value) for value in dollars_dict.values()])
-
-class GoodbudgetTxn:
+class GoodbudgetTxn(SingleTxn):
     def __init__(self, _ts: int, date: str, title: str, envelope: str, amt: int):
         self._ts = _ts
         self.date = date
@@ -68,12 +72,6 @@ class GoodbudgetTxn:
         self.amt = amt
         self.bal = 0
 
-    def to_dict(self):
-        return {key: value for key, value in vars(self).items() if key[0] != '_'}
-
-    def to_row(self) -> str:
-        dollars_dict = dict(self.to_dict(), amt=self.amt/100, bal=self.bal/100)
-        return ','.join([str(value) for value in dollars_dict.values()])
 
 class MergedTxn:
     def __init__(self, txn_1: Union[ChaseTxn, GoodbudgetTxn], txn_2: GoodbudgetTxn = None):
