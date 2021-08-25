@@ -133,7 +133,7 @@ new_ch_txns.reverse()
 
 # make list of txns to add
 for new_ch_txn in new_ch_txns:
-    answer_if_should_add = input(f'Add {new_ch_txn.title}, {new_ch_txn.amt}? (yes):')
+    answer_if_should_add = input(f'Add {new_ch_txn.date}, {new_ch_txn.title}, {new_ch_txn.amt}? (yes):')
     if not answer_if_should_add or answer_if_should_add.lower() in ['y', 'yes']:
         # find txn in `matched_txns` with most similar chase title to `new_ch_txn`
         similar_txn: MatchedTxn = matched_txns[0]

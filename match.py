@@ -244,4 +244,4 @@ with open(BAL_FREQ_FILE, 'w') as out_file:
 # print some helpful numbers
 print(f'AMT OF UNMATCHED CHASE TXNS: {len(only_ch_txns)}')
 print(f'AMT OF UNMATCHED GOODBUDGET TXNS: {len(only_gb_txns)}')
-print(f'AMT OF MATCHED TXNS: {len(only_both_txns)}')
+print(f'AMT OF MATCHED TXNS: {len(only_both_txns)}\n')
