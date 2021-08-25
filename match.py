@@ -263,5 +263,5 @@ def organize_txns():
     return OrganizedTxns(ch_txns=ch_txns, gb_txns=gb_txns, both_txns=both_txns, merged_txns=merged_txns)
 
 
-if __name__ == 'main':
+if __name__ == '__main__':
     organize_txns()

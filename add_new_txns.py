@@ -50,6 +50,8 @@ class Driver:
         payee_el.send_keys(payee)
         payee_el.send_keys(Keys.RETURN)
 
+        # flip sign
+        amount = amount.replace('-', '') if '-' in amount else '-' + amount
         amt_el = Driver._chrome.find_element_by_id('expense-amount')
         amt_el.click()
         amt_el.send_keys(amount)
@@ -139,18 +141,17 @@ def add_new_txns(after_ts: int):
     ##############################################################################
 
     organized_txns = organize_txns()
-    chase_txns, both_txns = organized_txns.ch_txns, organized_txns.both_txns
 
     # transform txns from types of `match` module to types of this module
-    new_ch_txns: List[ChaseTxn] = [ChaseTxn(
-        x._ts, x._is_debit, x.date, x.title, str(abs(x.amt)/100)) for x in chase_txns]
+    new_txns: List[ChaseTxn] = [ChaseTxn(
+        x._ts, x._is_debit, x.date, x.title, str(x.amt/100)) for x in organized_txns.ch_txns]
     matched_txns: List[MatchedTxn] = [MatchedTxn(
-        x.ch_txn.title, x.gb_txn.title, x.gb_txn.envelope) for x in both_txns]
+        x.ch_txn.title, x.gb_txn.title.replace('"', ''), x.gb_txn.envelope.replace('"', '')) for x in organized_txns.both_txns]
 
     Driver.login()
 
     # make list of txns to add
-    for new_txn in new_ch_txns:
+    for new_txn in new_txns:
         if new_txn.ts > after_ts and should_add(new_txn):
             # find txn in `matched_txns` with most similar chase title to `new_txn`
             similar_txn: MatchedTxn = matched_txns[0]
@@ -206,6 +207,6 @@ def get_cmd_args() -> int:
     return after_ts
 
 
-if __name__ == 'main':
+if __name__ == '__main__':
     after_ts = get_cmd_args()
     add_new_txns(after_ts)
