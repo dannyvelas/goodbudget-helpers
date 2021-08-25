@@ -21,7 +21,7 @@ GB_FILE = './in/goodbudget.csv'
 GB_START_BAL = 0
 
 # COLUMNS =    date                        envelope                            account         title                              notes                   amt                                         status details
-GB_REGEX = r"""(?P<date>\d\d\/\d\d\/\d{4}),("[^"]+"|[A-Za-z]*|\[Unallocated\]),"Chase Account",(?P<title>"[^"]+"|[A-Za-z0-9'’-]+),("[^"]+"|[A-Za-z'’-]*),,(?P<amt>-?\d{1,3}\.\d\d|"-?\d,\d{3}\.\d\d"),(CLR)?,(((\[Unallocated\]|[A-Za-z]+)\|-?\d{1,3}.\d\d)|("[^"]+"))?"""
+GB_REGEX = r"""(?P<date>\d\d\/\d\d\/\d{4}),(?P<envelope>"[^"]+"|[A-Za-z]*|\[Unallocated\]),"Chase Account",(?P<title>"[^"]+"|[A-Za-z0-9'’-]+),("[^"]+"|[A-Za-z'’-]*),,(?P<amt>-?\d{1,3}\.\d\d|"-?\d,\d{3}\.\d\d"),(CLR)?,(((\[Unallocated\]|[A-Za-z]+)\|-?\d{1,3}.\d\d)|("[^"]+"))?"""
 GB_REGEX = re.compile(GB_REGEX)
 ##############################################################################
 
@@ -46,11 +46,13 @@ class TxnType(Enum):
 
 
 class SingleTxn:
-    def __init__(self, _type: TxnType, _ts: int, date: str, title: str, amt: int):
+    def __init__(self, _type: TxnType, _ts: int, date: str, title: str, category: Union[str, None], amt: int):
         self._type = _type
         self._ts = _ts
         self.date = date
         self.title = title
+        if category is not None:
+            self.category = category
         self.amt = amt
         self.bal = 0
 
@@ -86,9 +88,9 @@ class MergedTxn:
 
     def to_row(self) -> str:
         ch_row = self.ch_txn.to_row() \
-            if hasattr(self, 'ch_txn') else ',' * (len(self.gb_txn.to_dict())-1)
+            if hasattr(self, 'ch_txn') else ',' * (len(self.gb_txn.to_dict())-2)
         gb_row = self.gb_txn.to_row() \
-            if hasattr(self, 'gb_txn') else ',' * (len(self.ch_txn.to_dict())-1)
+            if hasattr(self, 'gb_txn') else ',' * (len(self.ch_txn.to_dict()))
 
         return ','.join([self.type_.name, ch_row, gb_row, str(self.bal_diff / 100)])
 
@@ -108,6 +110,7 @@ def read_txns(file_name: str, regex: Pattern, txn_type: TxnType) -> List[SingleT
                     '_ts': int(dt.strptime(txn['date'], "%m/%d/%Y").timestamp()),
                     'date': txn['date'],
                     'title':  txn_title,
+                    'category': txn['envelope'] if txn_type == TxnType.GOODBUDGET else None,
                     'amt': int(txn['amt'].replace('"', '').replace(",", '').replace(".", ''))
                 }))
             else:
