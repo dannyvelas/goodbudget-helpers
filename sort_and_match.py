@@ -167,29 +167,6 @@ while ch_i < len(ch_txns) or gb_i < len(gb_txns):
             ch_i += 1
             gb_i += 1
 
-# remove ch_only txns that were never on gb bc they were offset by a refund
-merged_txns_dict = dict(enumerate(merged_txns))
-charges_seen: Dict[int, int] = {}
-amt_removed = 0
-i = 0
-while i in merged_txns_dict:
-    if merged_txns_dict[i].type_ == TxnType.CHASE:
-        ch_txn = merged_txns_dict[i].ch_txn
-
-        if ch_txn.amt < 0:
-            charges_seen[ch_txn.amt] = i
-        elif ch_txn.amt > 0 and -ch_txn.amt in charges_seen:
-            neg_to_del = merged_txns_dict[charges_seen[-ch_txn.amt]].ch_txn
-            should_del = input(
-                f"Remove {neg_to_del.to_row()} and {ch_txn.to_row()}?: (yes) ")
-            if not should_del or should_del.lower() in ['y', 'yes']:
-                del merged_txns_dict[charges_seen[-ch_txn.amt]]
-                del merged_txns_dict[i]
-                del charges_seen[-ch_txn.amt]
-                amt_removed += 2
-    i += 1
-merged_txns = list(merged_txns_dict.values())
-
 # sort by date
 merged_txns = sorted(merged_txns, key=lambda x: x.to_ts_and_title_tuple())
 
