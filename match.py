@@ -38,10 +38,12 @@ BOTH_FILE = f'{OUT_DIR}/both.csv'
 BAL_FREQ_FILE = f'{OUT_DIR}/bal_freq.csv'
 ##############################################################################
 
+
 class TxnType(Enum):
     CHASE = 'ch'
     GOODBUDGET = 'gb'
     BOTH = 'both'
+
 
 class SingleTxn:
     amt: int
@@ -54,6 +56,7 @@ class SingleTxn:
         dollars_dict = dict(self.to_dict(), amt=self.amt/100, bal=self.bal/100)
         return ','.join([str(value) for value in dollars_dict.values()])
 
+
 class ChaseTxn(SingleTxn):
     def __init__(self, _ts: int, _is_debit: bool, date: str, title: str, amt: int):
         self._ts = _ts
@@ -63,6 +66,7 @@ class ChaseTxn(SingleTxn):
         self.amt = amt
         self.bal = 0
 
+
 class GoodbudgetTxn(SingleTxn):
     def __init__(self, _ts: int, date: str, title: str, envelope: str, amt: int):
         self._ts = _ts
@@ -71,6 +75,7 @@ class GoodbudgetTxn(SingleTxn):
         self.envelope = envelope
         self.amt = amt
         self.bal = 0
+
 
 class MergedTxn:
     def __init__(self, txn_1: Union[ChaseTxn, GoodbudgetTxn], txn_2: GoodbudgetTxn = None):
@@ -108,13 +113,15 @@ class MergedTxn:
 
         return ','.join([self.type_.name, ch_row, gb_row, str(self.bal_diff / 100)])
 
+
 class OrganizedTxns:
     def __init__(self, ch_txns: List[ChaseTxn], gb_txns: List[GoodbudgetTxn], both_txns: List[MergedTxn], merged_txns: List[MergedTxn]):
         self.ch_txns = ch_txns
         self.gb_txns = gb_txns
         self.both_txns = both_txns
         self.merged_txns = merged_txns
-        
+
+
 def read_txns(file_name: str, regex: Pattern[str], txn_type: TxnType):
     txns = []
     with open(file_name) as in_file:
@@ -126,7 +133,7 @@ def read_txns(file_name: str, regex: Pattern[str], txn_type: TxnType):
                     txn_title += '"'
 
                 if txn_type == TxnType.CHASE:
-                    new_txn =  ChaseTxn(**{
+                    new_txn = ChaseTxn(**{
                         '_ts': int(dt.strptime(txn['date'], "%m/%d/%Y").timestamp()),
                         '_is_debit': txn['deb_or_cred'] == 'DEBIT',
                         'date': txn['date'],
@@ -151,30 +158,33 @@ def read_txns(file_name: str, regex: Pattern[str], txn_type: TxnType):
 
     return txns
 
+
 def txns_to_file(file_name: str, txns: Union[List[ChaseTxn], List[GoodbudgetTxn], List[MergedTxn]]):
     with open(file_name, 'w') as out_file:
         for txn in txns:
             out_file.write(f"{txn.to_row()}\n")
 
+
 def organize_txns():
     # read
     ch_txns: List[ChaseTxn] = read_txns(CH_FILE, CH_REGEX, TxnType.CHASE)
-    gb_txns: List[GoodbudgetTxn] = read_txns(GB_FILE, GB_REGEX, TxnType.GOODBUDGET)
-    
+    gb_txns: List[GoodbudgetTxn] = read_txns(
+        GB_FILE, GB_REGEX, TxnType.GOODBUDGET)
+
     # sort by amount
     ch_txns = sorted(ch_txns, key=attrgetter('amt', '_ts', 'title'))
     gb_txns = sorted(gb_txns, key=attrgetter('amt', '_ts', 'title'))
-    
+
     # merge chase txns and gb txns
     merged_txns: List[MergedTxn] = []
     ch_i, gb_i = 0, 0
     while ch_i < len(ch_txns) or gb_i < len(gb_txns):
         ch_txn = ch_txns[ch_i] if ch_i < len(ch_txns) else None
         gb_txn = gb_txns[gb_i] if gb_i < len(gb_txns) else None
-    
+
         days_apart = ((gb_txn._ts - ch_txn._ts) / (60 * 60 * 24)) \
             if ch_txn and gb_txn else None
-    
+
         if (ch_txn and gb_txn and ch_txn.amt < gb_txn.amt) or (ch_txn and gb_txn is None):
             merged_txns.append(MergedTxn(ch_txn))
             ch_i += 1
@@ -182,7 +192,7 @@ def organize_txns():
             merged_txns.append(MergedTxn(gb_txn))
             gb_i += 1
         else:
-            assert ch_txn and gb_txn and ch_txn.amt == gb_txn.amt
+            assert ch_txn and gb_txn and days_apart and ch_txn.amt == gb_txn.amt
             if days_apart < -7:
                 # if gb too far in past, add it by itself
                 merged_txns.append(MergedTxn(gb_txn))
@@ -195,10 +205,10 @@ def organize_txns():
                 merged_txns.append(MergedTxn(ch_txn, gb_txn))
                 ch_i += 1
                 gb_i += 1
-    
+
     # sort by date
     merged_txns = sorted(merged_txns, key=lambda x: x.to_ts_and_title_tuple())
-    
+
     # set SingleTxn.bal and MergedTxn.bal_diff
     bal_diff_freq: Dict[int, int] = {}
     ch_bal, gb_bal = CH_START_BAL, GB_START_BAL
@@ -209,19 +219,19 @@ def organize_txns():
         if merged_txn.type_ in [TxnType.GOODBUDGET, TxnType.BOTH]:
             gb_bal += merged_txn.gb_txn.amt
             merged_txn.gb_txn.bal = gb_bal
-    
+
         diff = ch_bal - gb_bal
         if diff in bal_diff_freq:
             bal_diff_freq[diff] += 1
         else:
             bal_diff_freq[diff] = 1
-    
+
         merged_txn.bal_diff = diff
-    
+
     # sort by balance differences that occur the most
     bal_diff_freq = dict(sorted(bal_diff_freq.items(),
                                 key=lambda item: item[1], reverse=True))
-    
+
     # split merged_txns into 3 different lists
     ch_txns: List[ChaseTxn] = []
     gb_txns: List[GoodbudgetTxn] = []
@@ -233,24 +243,25 @@ def organize_txns():
             gb_txns.append(txn.gb_txn)
         else:
             both_txns.append(txn)
-    
+
     # print each list to a file
     txns_to_file(MERGED_FILE, merged_txns)
     txns_to_file(CH_FILE, ch_txns)
     txns_to_file(GB_FILE, gb_txns)
     txns_to_file(BOTH_FILE, both_txns)
-    
+
     # print the sorted balance differences
     with open(BAL_FREQ_FILE, 'w') as out_file:
         for key, value in bal_diff_freq.items():
             out_file.write(f'{key / 100}, {value}\n')
-    
+
     # print some helpful numbers
     print(f'AMT OF UNMATCHED CHASE TXNS: {len(ch_txns)}')
     print(f'AMT OF UNMATCHED GOODBUDGET TXNS: {len(gb_txns)}')
     print(f'AMT OF MATCHED TXNS: {len(both_txns)}\n')
 
-    return OrganizedTxns(ch_txns=ch_txns,gb_txns=gb_txns, both_txns=both_txns,merged_txns=merged_txns)
+    return OrganizedTxns(ch_txns=ch_txns, gb_txns=gb_txns, both_txns=both_txns, merged_txns=merged_txns)
+
 
 if __name__ == 'main':
     organize_txns()

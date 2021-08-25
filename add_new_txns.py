@@ -12,6 +12,8 @@ ENV = dotenv_values(".env")
 
 ##### READLINE CONFIG ########################################################
 ENVELOPES = [x for x in ENV if x not in ["USERNAME", "PASSWORD"]]
+
+
 def env_completer(text, state):
     options = [x for x in ENVELOPES if x.lower().startswith(text.lower())]
     try:
@@ -19,16 +21,19 @@ def env_completer(text, state):
     except IndexError:
         return None
 
+
 def title_completer(text, state):
-    options =  [matched_txn.gb_title for matched_txn in matched_txns if matched_txn.gb_title.lower(
+    options = [matched_txn.gb_title for matched_txn in matched_txns if matched_txn.gb_title.lower(
     ).startswith(text.lower())]
     try:
         return options[state]
     except IndexError:
         return None
 
+
 readline.parse_and_bind("tab: complete")
 ##############################################################################
+
 
 class Driver:
     _chrome = Chrome()
@@ -103,6 +108,7 @@ class Driver:
 
         Driver._click_save_txn()
 
+
 class ChaseTxn:
     def __init__(self, is_debit: bool, date: str, title: str, amt: str):
         self.is_debit = is_debit
@@ -110,11 +116,13 @@ class ChaseTxn:
         self.title = title
         self.amt = amt
 
+
 class MatchedTxn:
     def __init__(self, ch_title: str, gb_title: str, gb_envelope: str):
         self.ch_title = ch_title
         self.gb_title = gb_title
         self.gb_envelope = gb_envelope
+
 
 def is_correct_match(matched_txn: MatchedTxn):
     print(
@@ -122,12 +130,15 @@ def is_correct_match(matched_txn: MatchedTxn):
     answer = input('\tIs this correct? (yes): ')
     return not answer or answer.lower() in ['y', 'yes']
 
+
 organized_txns = organize_txns()
 chase_txns, both_txns = organized_txns.ch_txns, organized_txns.both_txns
 
 # read txns
-new_ch_txns: List[ChaseTxn] = [ChaseTxn(x._is_debit, x.date, x.title, str(abs(x.amt)/100)) for x in chase_txns]
-matched_txns: List[MatchedTxn] = [MatchedTxn(x.ch_txn.title, x.gb_txn.title, x.gb_txn.envelope) for x in both_txns]
+new_ch_txns: List[ChaseTxn] = [ChaseTxn(
+    x._is_debit, x.date, x.title, str(abs(x.amt)/100)) for x in chase_txns]
+matched_txns: List[MatchedTxn] = [MatchedTxn(
+    x.ch_txn.title, x.gb_txn.title, x.gb_txn.envelope) for x in both_txns]
 
 # reverse new_ch_txns to go from past to present
 new_ch_txns.reverse()
@@ -136,7 +147,8 @@ Driver.login()
 
 # make list of txns to add
 for new_ch_txn in new_ch_txns:
-    answer_if_should_add = input(f'Add {new_ch_txn.date}, {new_ch_txn.title}, {new_ch_txn.amt}? (yes):')
+    answer_if_should_add = input(
+        f'Add {new_ch_txn.date}, {new_ch_txn.title}, {new_ch_txn.amt}? (yes):')
     if not answer_if_should_add or answer_if_should_add.lower() in ['y', 'yes']:
         # find txn in `matched_txns` with most similar chase title to `new_ch_txn`
         similar_txn: MatchedTxn = matched_txns[0]
