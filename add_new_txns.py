@@ -1,6 +1,4 @@
-from datetime import datetime as dt
 import readline
-import sys
 from typing import List
 
 from dotenv import dotenv_values
@@ -9,7 +7,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.select import Select
 
-from match import organize_txns
+from match import OrganizedTxns
 ENV = dotenv_values(".env")
 
 
@@ -118,7 +116,7 @@ def should_add(chase_txn: ChaseTxn):
     return not answer or answer.lower() in ['y', 'yes']
 
 
-def add_new_txns(after_ts: int):
+def add_new_txns(organized_txns: OrganizedTxns, after_ts: int = 0):
     ##### READLINE CONFIG ########################################################
     ENVELOPES = [x for x in ENV if x not in ["USERNAME", "PASSWORD"]]
 
@@ -139,8 +137,6 @@ def add_new_txns(after_ts: int):
 
     readline.parse_and_bind("tab: complete")
     ##############################################################################
-
-    organized_txns = organize_txns()
 
     # transform txns from types of `match` module to types of this module
     new_txns: List[ChaseTxn] = [ChaseTxn(
@@ -194,19 +190,3 @@ def add_new_txns(after_ts: int):
             else:
                 Driver.add_income(new_txn.date, new_gb_title,
                                   new_txn.amt, new_note)
-
-
-def get_cmd_args() -> int:
-    after_ts = 0
-    if len(sys.argv) == 3 and sys.argv[1] == '--after':
-        after_ts = int(dt.strptime(sys.argv[2], "%m/%d/%Y").timestamp())
-    elif len(sys.argv) != 1:
-        print('usage: add_new_txns.py [--after %m/%d/%Y]')
-        exit(1)
-
-    return after_ts
-
-
-if __name__ == '__main__':
-    after_ts = get_cmd_args()
-    add_new_txns(after_ts)

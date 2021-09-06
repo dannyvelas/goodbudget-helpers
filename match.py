@@ -4,7 +4,6 @@ from operator import attrgetter
 from pathlib import Path
 from re import Pattern
 import re
-import sys
 from typing import Dict, List, Tuple, Union
 
 ##### CHASE ##################################################################
@@ -258,10 +257,3 @@ def organize_txns(out_dir: str = './out/merged'):
     print(f'AMT OF MATCHED TXNS: {len(both_txns)}\n')
 
     return OrganizedTxns(ch_txns=ch_txns, gb_txns=gb_txns, both_txns=both_txns, merged_txns=merged_txns)
-
-
-if __name__ == '__main__':
-    if len(sys.argv) > 2 and sys.argv[1] == '--dir':
-        organize_txns(sys.argv[2])
-    else:
-        organize_txns()
