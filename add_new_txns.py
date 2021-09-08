@@ -9,6 +9,7 @@ from selenium.webdriver.support.select import Select
 
 from match import OrganizedTxns
 ENV = dotenv_values(".env")
+ENVELOPES = dotenv_values(".envelopes.env")
 
 
 class Driver:
@@ -19,9 +20,9 @@ class Driver:
     @staticmethod
     def login():
         Driver._chrome.find_element_by_id(
-            'username').send_keys(ENV["USERNAME"])
+            'username').send_keys(ENV["GB_USERNAME"])
         Driver._chrome.find_element_by_id(
-            'password').send_keys(ENV["PASSWORD"])
+            'password').send_keys(ENV["GB_PASSWORD"])
 
         # login submit button
         Driver._chrome.find_element_by_xpath(
@@ -118,8 +119,6 @@ def should_add(chase_txn: ChaseTxn):
 
 def add_new_txns(organized_txns: OrganizedTxns, after_ts: int = 0):
     ##### READLINE CONFIG ########################################################
-    ENVELOPES = [x for x in ENV if x not in ["USERNAME", "PASSWORD"]]
-
     def env_completer(text, state):
         options = [x for x in ENVELOPES if x.lower().startswith(text.lower())]
         try:

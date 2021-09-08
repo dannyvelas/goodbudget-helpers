@@ -202,7 +202,7 @@ def organize_txns(out_dir: str = './out/merged'):
                 ch_i += 1
                 gb_i += 1
 
-    # sort by date
+    # sort by date and title
     merged_txns = sorted(merged_txns, key=lambda x: x.to_ts_and_title_tuple())
 
     # set SingleTxn.bal and MergedTxn.bal_diff

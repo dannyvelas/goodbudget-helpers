@@ -20,11 +20,11 @@ while i < len(sys.argv):
         i += 1
     else:
         print(
-            "usage: python3 main.py [--dir out/dir/here] [--add [--after %m/%d/%Y]]")
+            "usage: python3 main.py [--dir <out-dir>] [--add [--after mm/dd/yyyy]]")
         exit(1)
     i += 1
 
 organized_txns = organize_txns(out_dir)
 
 if add_txns:
-    add_new_txns(after_ts)
+    add_new_txns(organized_txns, after_ts)
