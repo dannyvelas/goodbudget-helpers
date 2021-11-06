@@ -13,79 +13,75 @@ ENVELOPES = dotenv_values(".envelopes.env")
 
 
 class Driver:
-    _chrome = Chrome()
-    _chrome.get('https://goodbudget.com/login')
-    _chrome.implicitly_wait(10)
+    def __init__(self):
+        self.chrome = Chrome()
+        self.chrome.get('https://goodbudget.com/login')
+        self.chrome.implicitly_wait(10)
 
-    @staticmethod
-    def login():
-        Driver._chrome.find_element_by_id(
+    def login(self):
+        self.chrome.find_element_by_id(
             'username').send_keys(ENV["GB_USERNAME"])
-        Driver._chrome.find_element_by_id(
+        self.chrome.find_element_by_id(
             'password').send_keys(ENV["GB_PASSWORD"])
 
         # login submit button
-        Driver._chrome.find_element_by_xpath(
+        self.chrome.find_element_by_xpath(
             '//*[@id="content"]/div/div/div/section[2]/div/div/div/div/div/section/div/div/div[1]/div/div/section/div/div/div/div/div/div[1]/div/form/div/div[4]/button').click()
 
-    @staticmethod
-    def _click_add_txn(): Driver._chrome.find_element_by_xpath(
+    def _click_add_txn(self): self.chrome.find_element_by_xpath(
         '/html/body/div[1]/div/div/div/div[1]/a[2]').click()
 
-    @staticmethod
-    def _click_save_txn(): Driver._chrome.find_element_by_id(
+    def _click_save_txn(self): self.chrome.find_element_by_id(
         'addTransactionSave').click()
 
-    @staticmethod
-    def add_expense(date: str, payee: str, amount: str, envelope: str, note: str):
-        Driver._click_add_txn()
+    def add_expense(self, date: str, payee: str, amount: str, envelope: str, note: str):
+        self._click_add_txn()
 
-        date_field = Driver._chrome.find_element_by_id('expense-date')
+        date_field = self.chrome.find_element_by_id('expense-date')
         date_field.clear()
         date_field.send_keys(date)
 
-        payee_el: WebElement = Driver._chrome.find_element_by_id(
+        payee_el: WebElement = self.chrome.find_element_by_id(
             'expense-receiver')
         payee_el.send_keys(payee)
         payee_el.send_keys(Keys.RETURN)
 
         # flip sign
         amount = amount.replace('-', '') if '-' in amount else '-' + amount
-        amt_el = Driver._chrome.find_element_by_id('expense-amount')
+        amt_el = self.chrome.find_element_by_id('expense-amount')
         amt_el.click()
         amt_el.send_keys(amount)
 
-        Select(Driver._chrome.find_element_by_xpath('//*[@id="expenseCredit"]/form/fieldset/div[4]/div/select')) \
-            .select_by_value(ENV[envelope.replace(' ', '_').upper()])
+        Select(self.chrome.find_element_by_xpath('//*[@id="expenseCredit"]/form/fieldset/div[4]/div/select')) \
+            .select_by_value(ENVELOPES[envelope.replace(' ', '_').upper()])
 
         if note:
-            Driver._chrome.find_element_by_id('expense-notes').send_keys(note)
+            self.chrome.find_element_by_id('expense-notes').send_keys(note)
 
-        Driver._click_save_txn()
+        self._click_save_txn()
 
-    @staticmethod
-    def add_income(date: str, payer: str, amount: str, note: str):
-        Driver._click_add_txn()
+    def add_income(self, date: str, payer: str, amount: str, note: str):
+        self._click_add_txn()
 
-        Driver._chrome.find_element_by_xpath(
+        self.chrome.find_element_by_xpath(
             '//*[@id="myTab"]/li[3]/a').click()  # click income tab
 
-        date_field = Driver._chrome.find_element_by_id('income-date')
+        date_field = self.chrome.find_element_by_id('income-date')
         date_field.clear()
         date_field.send_keys(date)
 
-        payer_el: WebElement = Driver._chrome.find_element_by_id(
+        payer_el: WebElement = self.chrome.find_element_by_id(
             'income-payer')
         payer_el.send_keys(payer)
         payer_el.send_keys(Keys.RETURN)
 
-        Driver._chrome.find_element_by_xpath(
+        self.chrome.find_element_by_xpath(
             '//*[@id="income"]/form/fieldset/div[3]/div/input').send_keys(amount)  # income amt
 
         if note:
-            Driver._chrome.find_element_by_id('income-notes').send_keys(note)
+            self.chrome.find_element_by_id('income-notes').send_keys(note)
 
-        Driver._click_save_txn()
+        self._click_save_txn()
 
 
 class ChaseTxn:
@@ -138,22 +134,25 @@ def add_new_txns(organized_txns: OrganizedTxns, after_ts: int = 0):
     ##############################################################################
 
     # transform txns from types of `match` module to types of this module
-    new_txns: List[ChaseTxn] = [ChaseTxn(
-        x._ts, x._is_debit, x.date, x.title, str(x.amt/100)) for x in organized_txns.ch_txns]
+    txns_to_add: List[ChaseTxn] = [ChaseTxn(
+        x._ts, x._is_debit, x.date, x.title, str(x.amt/100)) for x in organized_txns.ch_txns if not x._is_pending]
+    pending_txns: List[ChaseTxn] = [ChaseTxn(
+        x._ts, x._is_debit, x.date, x.title, str(x.amt/100)) for x in organized_txns.ch_txns if x._is_pending]
     matched_txns: List[MatchedTxn] = [MatchedTxn(
         x.ch_txn.title, x.gb_txn.title.replace('"', ''), x.gb_txn.envelope.replace('"', '')) for x in organized_txns.both_txns]
 
-    Driver.login()
+    driver = Driver()
+    driver.login()
 
-    # make list of txns to add
-    for new_txn in new_txns:
-        if new_txn.ts > after_ts and should_add(new_txn):
-            # find txn in `matched_txns` with most similar chase title to `new_txn`
+    # add each txn
+    for txn in txns_to_add:
+        if txn.ts > after_ts and should_add(txn):
+            # find txn in `matched_txns` with most similar chase title to `txn`
             similar_txn: MatchedTxn = matched_txns[0]
             max_eq_chars = -1
             for matched_txn in matched_txns:
                 i = 0
-                while i < len(new_txn.title) and i < len(matched_txn.ch_title) and new_txn.title[i] == matched_txn.ch_title[i]:
+                while i < len(txn.title) and i < len(matched_txn.ch_title) and txn.title[i] == matched_txn.ch_title[i]:
                     i += 1
                 if i > max_eq_chars:
                     max_eq_chars = i
@@ -167,13 +166,13 @@ def add_new_txns(organized_txns: OrganizedTxns, after_ts: int = 0):
                         readline.set_completer(title_completer)
                         new_gb_title = input('\tTitle: ')
 
-                        if new_txn.is_debit:
+                        if txn.is_debit:
                             readline.set_completer(env_completer)
                             new_gb_envelope = input('\tEnvelope: ')
 
-                        # add this new txn to `matched_txns` so that it could be guessed as a `similar_txn` for a future `new_txn`
+                        # add this new txn to `matched_txns` so that it could be guessed as a `similar_txn` for a future `txn`
                         matched_txns.append(MatchedTxn(
-                            ch_title=new_txn.title, gb_title=new_gb_title, gb_envelope=new_gb_envelope))
+                            ch_title=txn.title, gb_title=new_gb_title, gb_envelope=new_gb_envelope))
 
                     new_note = input('\tNote? (none): ')
                     break
@@ -183,9 +182,17 @@ def add_new_txns(organized_txns: OrganizedTxns, after_ts: int = 0):
                     print('\n')
 
             # run selenium code to add to GB
-            if new_txn.is_debit:
-                Driver.add_expense(new_txn.date, new_gb_title,
-                                   new_txn.amt, new_gb_envelope, new_note)
+            if txn.is_debit:
+                driver.add_expense(txn.date, new_gb_title,
+                                   txn.amt, new_gb_envelope, new_note)
             else:
-                Driver.add_income(new_txn.date, new_gb_title,
-                                  new_txn.amt, new_note)
+                driver.add_income(txn.date, new_gb_title, txn.amt, new_note)
+
+    # print amts
+    amt_pending = 0
+    for txn in pending_txns:
+        amt_as_int = int(txn.amt.replace('.', ''))
+        amt_pending += amt_as_int
+
+    print(
+        f"\nAll done! Dollar amount not added from pending txns: ${amt_pending/100}", end='')

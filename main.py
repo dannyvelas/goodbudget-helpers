@@ -11,7 +11,7 @@ i = 1
 while i < len(sys.argv):
     arg = sys.argv[i]
     if arg == "--dir" and i + 1 < len(sys.argv) and out_dir == "./out/merged":
-        compare_to = sys.argv[i + 1]
+        out_dir = sys.argv[i + 1]
         i += 1
     elif arg == "--add" and not add_txns:
         add_txns = True
@@ -25,6 +25,8 @@ while i < len(sys.argv):
     i += 1
 
 organized_txns = organize_txns(out_dir)
+
+print(f"Saved to: {out_dir}")
 
 if add_txns:
     add_new_txns(organized_txns, after_ts)
