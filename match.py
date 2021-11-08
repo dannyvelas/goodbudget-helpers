@@ -6,6 +6,9 @@ from re import Pattern
 import re
 from typing import Dict, List, Tuple, Union
 
+# CONFIG
+MAX_DAYS_APART = 7
+
 ##### CHASE ##################################################################
 IN_CH_FILE = './in/chase.csv'
 CH_START_BAL = 362335
@@ -186,26 +189,21 @@ def organize_txns(out_dir: str = './out/merged'):
     # merge chase txns and gb txns
     merged_txns: List[MergedTxn] = []
     ch_i, gb_i = 0, 0
-    while ch_i < len(ch_txns) or gb_i < len(gb_txns):
-        ch_txn = ch_txns[ch_i] if ch_i < len(ch_txns) else None
-        gb_txn = gb_txns[gb_i] if gb_i < len(gb_txns) else None
-
-        days_apart = ((gb_txn._ts - ch_txn._ts) / (60 * 60 * 24)) \
-            if ch_txn and gb_txn else None
-
-        if (ch_txn and gb_txn and ch_txn.amt < gb_txn.amt) or (ch_txn and gb_txn is None):
+    while ch_i < len(ch_txns) and gb_i < len(gb_txns):
+        ch_txn, gb_txn = ch_txns[ch_i], gb_txns[gb_i]
+        if ch_txn.amt < gb_txn.amt:
             merged_txns.append(MergedTxn(ch_txn))
             ch_i += 1
-        elif (ch_txn and gb_txn and ch_txn.amt > gb_txn.amt) or (gb_txn and ch_txn is None):
+        elif ch_txn.amt > gb_txn.amt:
             merged_txns.append(MergedTxn(gb_txn))
             gb_i += 1
         else:
-            assert ch_txn and gb_txn and days_apart is not None and ch_txn.amt == gb_txn.amt
-            if days_apart < -7:
+            days_apart = (gb_txn._ts - ch_txn._ts) / (60 * 60 * 24)
+            if days_apart < (MAX_DAYS_APART * -1):
                 # if gb too far in past, add it by itself
                 merged_txns.append(MergedTxn(gb_txn))
                 gb_i += 1
-            elif days_apart > 7:
+            elif days_apart > MAX_DAYS_APART:
                 # if ch too far in past, add it by itself
                 merged_txns.append(MergedTxn(ch_txn))
                 ch_i += 1
@@ -213,6 +211,15 @@ def organize_txns(out_dir: str = './out/merged'):
                 merged_txns.append(MergedTxn(ch_txn, gb_txn))
                 ch_i += 1
                 gb_i += 1
+
+    # if there are some txns left in one list but not the other,
+    # add those txns individually
+    while ch_i < len(ch_txns):
+        merged_txns.append(MergedTxn(ch_txns[ch_i]))
+        ch_i += 1
+    while gb_i < len(gb_txns):
+        merged_txns.append(MergedTxn(gb_txns[gb_i]))
+        gb_i += 1
 
     # sort by date and title
     merged_txns = sorted(merged_txns, key=lambda x: x.to_ts_and_title_tuple())
