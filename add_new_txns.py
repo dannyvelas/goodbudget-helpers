@@ -7,7 +7,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.select import Select
 
-from match import OrganizedTxns
+from datatypes import OrganizedTxns
 ENV = dotenv_values(".env")
 ENVELOPES = dotenv_values(".envelopes.env")
 
@@ -133,11 +133,11 @@ def add_new_txns(organized_txns: OrganizedTxns, after_ts: int = 0):
     readline.parse_and_bind("tab: complete")
     ##############################################################################
 
-    # transform txns from types of `match` module to types of this module
+    # cast txn types from `datatypes.py` to types of this module
     txns_to_add: List[ChaseTxn] = [ChaseTxn(
-        x._ts, x._is_debit, x.date, x.title, str(x.amt/100)) for x in organized_txns.ch_txns if not x._is_pending]
+        x._ts, x._is_debit, x.date, x.title, str(x.amt/100)) for x in organized_txns.only_ch_txns if not x._is_pending]
     pending_txns: List[ChaseTxn] = [ChaseTxn(
-        x._ts, x._is_debit, x.date, x.title, str(x.amt/100)) for x in organized_txns.ch_txns if x._is_pending]
+        x._ts, x._is_debit, x.date, x.title, str(x.amt/100)) for x in organized_txns.only_ch_txns if x._is_pending]
     matched_txns: List[MatchedTxn] = [MatchedTxn(
         x.ch_txn.title, x.gb_txn.title.replace('"', ''), x.gb_txn.envelope.replace('"', '')) for x in organized_txns.both_txns]
 
