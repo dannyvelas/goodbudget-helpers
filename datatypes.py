@@ -96,20 +96,10 @@ class BalanceDifferenceFrequency:
 
 class TxnsGrouped:
     def __init__(self, only_ch_txns: List[ChaseTxn], only_gb_txns: List[GoodbudgetTxn],
-                 both_txns: List[MergedTxn], merged_txns: List[MergedTxn]):
+                 both_txns: List[MergedTxn], merged_txns: List[MergedTxn],
+                 bal_diff_freq: List[BalanceDifferenceFrequency]):
         self.only_ch_txns = only_ch_txns
         self.only_gb_txns = only_gb_txns
         self.both_txns = both_txns
         self.merged_txns = merged_txns
-
-
-class TxnsGroupedInfo:
-    def __init__(self, txns_grouped: TxnsGrouped, bal_diff_freq: List[BalanceDifferenceFrequency],
-                 amt_unmatched_ch_txns: int, amt_unmatched_gb_txns: int, amt_matched_txns: int,
-                 last_gb_txn_ts: int):
-        self.txns_grouped = txns_grouped
         self.bal_diff_freq = bal_diff_freq
-        self.amt_unmatched_ch_txns = amt_unmatched_ch_txns
-        self.amt_unmatched_gb_txns = amt_unmatched_gb_txns
-        self.amt_matched_txns = amt_matched_txns
-        self.last_gb_txn_ts = last_gb_txn_ts

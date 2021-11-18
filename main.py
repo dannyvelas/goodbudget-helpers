@@ -2,8 +2,8 @@ import sys
 
 from add_new_txns import add_new_txns
 from file_in import read_ch_txns, read_gb_txns
-from file_out import OUT_DIR, write_txns_grouped_info_to_files
-from match import get_txns_grouped_info
+from file_out import OUT_DIR, write_txns_grouped_to_files
+from match import get_txns_grouped
 
 add_txns = False
 graph = False
@@ -23,11 +23,17 @@ while i < len(sys.argv):
 ch_txns = read_ch_txns()
 gb_txns = read_gb_txns()
 
-txns_grouped_info = get_txns_grouped_info(ch_txns, gb_txns)
+txns_grouped = get_txns_grouped(ch_txns, gb_txns)
 
-write_txns_grouped_info_to_files(txns_grouped_info)
+# print some helpful numbers
+print(f'AMT OF UNMATCHED CHASE TXNS: {len(txns_grouped.only_ch_txns)}')
+print(f'AMT OF UNMATCHED GOODBUDGET TXNS: {len(txns_grouped.only_gb_txns)}')
+print(f'AMT OF MATCHED TXNS: {len(txns_grouped.both_txns)}\n')
+
+write_txns_grouped_to_files(txns_grouped)
 
 print(f"Saved to: {OUT_DIR}")
 
 if add_txns:
-    add_new_txns(txns_grouped_info)
+    last_gb_txn_ts = gb_txns[-1]._ts if len(gb_txns) > 0 else 0
+    add_new_txns(txns_grouped, last_gb_txn_ts)

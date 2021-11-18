@@ -7,7 +7,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.select import Select
 
-from datatypes import TxnsGroupedInfo
+from datatypes import TxnsGrouped
 ENV = dotenv_values(".env")
 ENVELOPES = dotenv_values(".envelopes.env")
 
@@ -113,7 +113,7 @@ def should_add(chase_txn: TrimmedChaseTxn):
     return not answer or answer.lower() in ['y', 'yes']
 
 
-def add_new_txns(txns_grouped_info: TxnsGroupedInfo):
+def add_new_txns(txns_grouped: TxnsGrouped, last_gb_txn_ts: int):
     ##### READLINE CONFIG ########################################################
     def env_completer(text, state):
         options = [x for x in ENVELOPES if x.lower().startswith(text.lower())]
@@ -133,8 +133,6 @@ def add_new_txns(txns_grouped_info: TxnsGroupedInfo):
     readline.parse_and_bind("tab: complete")
     ##############################################################################
 
-    txns_grouped = txns_grouped_info.txns_grouped
-
     # Cast ChaseTxns to TrimmedChaseTxns
     txns_to_add = [TrimmedChaseTxn(
         x._ts, x._is_debit, x.date, x.title, str(x.amt/100)) for x in txns_grouped.only_ch_txns if not x._is_pending]
@@ -150,7 +148,7 @@ def add_new_txns(txns_grouped_info: TxnsGroupedInfo):
 
     # add each txn
     for txn in txns_to_add:
-        if txn.ts > txns_grouped_info.last_gb_txn_ts and should_add(txn):
+        if txn.ts > last_gb_txn_ts and should_add(txn):
             # find txn in `matched_txns` with most similar chase title to `txn`
             similar_txn: MatchedTxn = matched_txns[0]
             max_eq_chars = -1

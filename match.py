@@ -7,7 +7,6 @@ from datatypes import (
     GoodbudgetTxn,
     MergedTxn,
     TxnsGrouped,
-    TxnsGroupedInfo,
     TxnType,
 )
 
@@ -16,7 +15,7 @@ CH_START_BAL = 362335
 GB_START_BAL = 0
 
 
-def get_txns_grouped_info(ch_txns: List[ChaseTxn], gb_txns: List[GoodbudgetTxn]) -> TxnsGroupedInfo:
+def get_txns_grouped(ch_txns: List[ChaseTxn], gb_txns: List[GoodbudgetTxn]) -> TxnsGrouped:
     # sort by amount
     ch_txns.sort(key=attrgetter('amt', '_ts', 'title'))
     gb_txns.sort(key=attrgetter('amt', '_ts', 'title'))
@@ -98,16 +97,9 @@ def get_txns_grouped_info(ch_txns: List[ChaseTxn], gb_txns: List[GoodbudgetTxn])
         else:
             both_txns.append(txn)
 
-    txns_grouped = TxnsGrouped(
+    return TxnsGrouped(
         only_ch_txns=only_ch_txns,
         only_gb_txns=only_gb_txns,
         both_txns=both_txns,
-        merged_txns=merged_txns)
-
-    return TxnsGroupedInfo(
-        txns_grouped=txns_grouped,
-        bal_diff_freq=bal_diff_freq_sorted,
-        amt_unmatched_ch_txns=len(only_ch_txns),
-        amt_unmatched_gb_txns=len(only_gb_txns),
-        amt_matched_txns=len(both_txns),
-        last_gb_txn_ts=gb_txns[-1]._ts if len(gb_txns) > 0 else 0)
+        merged_txns=merged_txns,
+        bal_diff_freq=bal_diff_freq_sorted)
