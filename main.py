@@ -1,38 +1,33 @@
-from datetime import datetime as dt
 import sys
-from typing import List
 
 from add_new_txns import add_new_txns
-from datatypes import ChaseTxn, GoodbudgetTxn
 from file_in import read_ch_txns, read_gb_txns
-from file_out import OUT_DIR, write_organized_txns_to_files
-from match import get_organized_txns
-
+from file_out import OUT_DIR, write_txns_grouped_info_to_files
+from match import get_txns_grouped_info
 
 add_txns = False
-after_ts = 0
+graph = False
 
 i = 1
 while i < len(sys.argv):
     arg = sys.argv[i]
     if arg == "--add" and not add_txns:
         add_txns = True
-    elif arg == '--after' and i + 1 < len(sys.argv) and add_txns and after_ts == 0:
-        after_ts = int(dt.strptime(sys.argv[i+1], "%m/%d/%Y").timestamp())
-        i += 1
+    elif arg == "--graph" and not graph:
+        graph = True
     else:
-        print("usage: python3 main.py [--add [--after mm/dd/yyyy]]")
+        print("usage: python3 main.py [--add] [--graph]")
         exit(1)
     i += 1
 
-ch_txns: List[ChaseTxn] = read_ch_txns()
-gb_txns: List[GoodbudgetTxn] = read_gb_txns()
+ch_txns = read_ch_txns()
+gb_txns = read_gb_txns()
 
-organized_txns = get_organized_txns(ch_txns, gb_txns)
+txns_grouped_info = get_txns_grouped_info(ch_txns, gb_txns)
 
-write_organized_txns_to_files(organized_txns)
+write_txns_grouped_info_to_files(txns_grouped_info)
 
 print(f"Saved to: {OUT_DIR}")
 
 if add_txns:
-    add_new_txns(organized_txns, after_ts)
+    add_new_txns(txns_grouped_info)

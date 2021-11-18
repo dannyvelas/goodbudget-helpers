@@ -6,7 +6,8 @@ from datatypes import (
     ChaseTxn,
     GoodbudgetTxn,
     MergedTxn,
-    OrganizedTxns,
+    TxnsGrouped,
+    TxnsGroupedInfo,
     TxnType,
 )
 
@@ -15,7 +16,7 @@ CH_START_BAL = 362335
 GB_START_BAL = 0
 
 
-def get_organized_txns(ch_txns: List[ChaseTxn], gb_txns: List[GoodbudgetTxn]):
+def get_txns_grouped_info(ch_txns: List[ChaseTxn], gb_txns: List[GoodbudgetTxn]) -> TxnsGroupedInfo:
     # sort by amount
     ch_txns.sort(key=attrgetter('amt', '_ts', 'title'))
     gb_txns.sort(key=attrgetter('amt', '_ts', 'title'))
@@ -81,8 +82,9 @@ def get_organized_txns(ch_txns: List[ChaseTxn], gb_txns: List[GoodbudgetTxn]):
         merged_txn.bal_diff = diff
 
     # sort by balance differences that occur the most
-    bal_diff_freq_sorted = [BalanceDifferenceFrequency(x) for x in sorted(bal_diff_freq.items(),
-                                                                          key=lambda item: item[1], reverse=True)]
+    bal_diff_freq_sorted = [BalanceDifferenceFrequency(x)
+                            for x in sorted(bal_diff_freq.items(),
+                            key=lambda item: item[1], reverse=True)]
 
     # split merged_txns into 3 different lists
     only_ch_txns: List[ChaseTxn] = []
@@ -96,14 +98,16 @@ def get_organized_txns(ch_txns: List[ChaseTxn], gb_txns: List[GoodbudgetTxn]):
         else:
             both_txns.append(txn)
 
-    # print some helpful numbers
-    print(f'AMT OF UNMATCHED CHASE TXNS: {len(ch_txns)}')
-    print(f'AMT OF UNMATCHED GOODBUDGET TXNS: {len(gb_txns)}')
-    print(f'AMT OF MATCHED TXNS: {len(both_txns)}\n')
-
-    return OrganizedTxns(
+    txns_grouped = TxnsGrouped(
         only_ch_txns=only_ch_txns,
         only_gb_txns=only_gb_txns,
         both_txns=both_txns,
-        merged_txns=merged_txns,
-        bal_diff_freq=bal_diff_freq_sorted)
+        merged_txns=merged_txns)
+
+    return TxnsGroupedInfo(
+        txns_grouped=txns_grouped,
+        bal_diff_freq=bal_diff_freq_sorted,
+        amt_unmatched_ch_txns=len(only_ch_txns),
+        amt_unmatched_gb_txns=len(only_gb_txns),
+        amt_matched_txns=len(both_txns),
+        last_gb_txn_ts=gb_txns[-1]._ts if len(gb_txns) > 0 else 0)

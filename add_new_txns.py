@@ -7,7 +7,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.select import Select
 
-from datatypes import OrganizedTxns
+from datatypes import TxnsGroupedInfo
 ENV = dotenv_values(".env")
 ENVELOPES = dotenv_values(".envelopes.env")
 
@@ -84,7 +84,7 @@ class Driver:
         self._click_save_txn()
 
 
-class ChaseTxn:
+class TrimmedChaseTxn:
     def __init__(self, ts: int, is_debit: bool, date: str, title: str, amt: str):
         self.ts = ts
         self.is_debit = is_debit
@@ -107,13 +107,13 @@ def is_correct_match(matched_txn: MatchedTxn):
     return not answer or answer.lower() in ['y', 'yes']
 
 
-def should_add(chase_txn: ChaseTxn):
+def should_add(chase_txn: TrimmedChaseTxn):
     answer = input(
         f'Add {"DEBIT" if chase_txn.is_debit else "CREDIT"}, {chase_txn.date}, {chase_txn.title}, {chase_txn.amt}? (yes): ')
     return not answer or answer.lower() in ['y', 'yes']
 
 
-def add_new_txns(organized_txns: OrganizedTxns, after_ts: int = 0):
+def add_new_txns(txns_grouped_info: TxnsGroupedInfo):
     ##### READLINE CONFIG ########################################################
     def env_completer(text, state):
         options = [x for x in ENVELOPES if x.lower().startswith(text.lower())]
@@ -133,20 +133,24 @@ def add_new_txns(organized_txns: OrganizedTxns, after_ts: int = 0):
     readline.parse_and_bind("tab: complete")
     ##############################################################################
 
-    # cast txn types from `datatypes.py` to types of this module
-    txns_to_add: List[ChaseTxn] = [ChaseTxn(
-        x._ts, x._is_debit, x.date, x.title, str(x.amt/100)) for x in organized_txns.only_ch_txns if not x._is_pending]
-    pending_txns: List[ChaseTxn] = [ChaseTxn(
-        x._ts, x._is_debit, x.date, x.title, str(x.amt/100)) for x in organized_txns.only_ch_txns if x._is_pending]
+    txns_grouped = txns_grouped_info.txns_grouped
+
+    # Cast ChaseTxns to TrimmedChaseTxns
+    txns_to_add = [TrimmedChaseTxn(
+        x._ts, x._is_debit, x.date, x.title, str(x.amt/100)) for x in txns_grouped.only_ch_txns if not x._is_pending]
+    pending_txns = [TrimmedChaseTxn(
+        x._ts, x._is_debit, x.date, x.title, str(x.amt/100)) for x in txns_grouped.only_ch_txns if x._is_pending]
+
     matched_txns: List[MatchedTxn] = [MatchedTxn(
-        x.ch_txn.title, x.gb_txn.title.replace('"', ''), x.gb_txn.envelope.replace('"', '')) for x in organized_txns.both_txns]
+        x.ch_txn.title, x.gb_txn.title.replace('"', ''), x.gb_txn.envelope.replace('"', ''))
+        for x in txns_grouped.both_txns]
 
     driver = Driver()
     driver.login()
 
     # add each txn
     for txn in txns_to_add:
-        if txn.ts > after_ts and should_add(txn):
+        if txn.ts > txns_grouped_info.last_gb_txn_ts and should_add(txn):
             # find txn in `matched_txns` with most similar chase title to `txn`
             similar_txn: MatchedTxn = matched_txns[0]
             max_eq_chars = -1
