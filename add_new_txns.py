@@ -85,9 +85,10 @@ class Driver:
 
 
 class TrimmedChaseTxn:
-    def __init__(self, ts: int, is_debit: bool, date: str, title: str, amt: str):
+    def __init__(self, ts: int, is_debit: bool, is_pending: bool, date: str, title: str, amt: str):
         self.ts = ts
         self.is_debit = is_debit
+        self.is_pending = is_pending
         self.date = date
         self.title = title
         self.amt = amt
@@ -134,10 +135,8 @@ def add_new_txns(txns_grouped: TxnsGrouped, last_gb_txn_ts: int):
     ##############################################################################
 
     # Cast ChaseTxns to TrimmedChaseTxns
-    txns_to_add = [TrimmedChaseTxn(
-        x._ts, x._is_debit, x.date, x.title, str(x.amt/100)) for x in txns_grouped.only_ch_txns if not x._is_pending]
-    pending_txns = [TrimmedChaseTxn(
-        x._ts, x._is_debit, x.date, x.title, str(x.amt/100)) for x in txns_grouped.only_ch_txns if x._is_pending]
+    only_ch_txns = [TrimmedChaseTxn(
+        x.ts, x.is_debit, x.is_pending, x.date, x.title, str(x.amt/100)) for x in txns_grouped.only_ch_txns]
 
     matched_txns: List[MatchedTxn] = [MatchedTxn(
         x.ch_txn.title, x.gb_txn.title.replace('"', ''), x.gb_txn.envelope.replace('"', ''))
@@ -147,8 +146,8 @@ def add_new_txns(txns_grouped: TxnsGrouped, last_gb_txn_ts: int):
     driver.login()
 
     # add each txn
-    for txn in txns_to_add:
-        if txn.ts > last_gb_txn_ts and should_add(txn):
+    for txn in only_ch_txns:
+        if txn.ts > last_gb_txn_ts and not txn.is_pending and should_add(txn):
             # find txn in `matched_txns` with most similar chase title to `txn`
             similar_txn: MatchedTxn = matched_txns[0]
             max_eq_chars = -1
@@ -192,9 +191,9 @@ def add_new_txns(txns_grouped: TxnsGrouped, last_gb_txn_ts: int):
 
     # print amts
     amt_pending = 0
-    for txn in pending_txns:
-        amt_as_int = int(txn.amt.replace('.', ''))
-        amt_pending += amt_as_int
+    for txn in txns_grouped.only_ch_txns:
+        if txn.ts > last_gb_txn_ts and txn.is_pending:
+            amt_pending += txn.amt
 
     print(
         f"\nAll done! Dollar amount not added from pending txns: ${amt_pending/100}", end='')

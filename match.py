@@ -6,8 +6,8 @@ from datatypes import (
     ChaseTxn,
     GoodbudgetTxn,
     MergedTxn,
-    TxnsGrouped,
     TxnType,
+    TxnsGrouped,
 )
 
 MAX_DAYS_APART = 7
@@ -17,8 +17,8 @@ GB_START_BAL = 0
 
 def get_txns_grouped(ch_txns: List[ChaseTxn], gb_txns: List[GoodbudgetTxn]) -> TxnsGrouped:
     # sort by amount
-    ch_txns.sort(key=attrgetter('amt', '_ts', 'title'))
-    gb_txns.sort(key=attrgetter('amt', '_ts', 'title'))
+    ch_txns.sort(key=attrgetter('amt', 'ts', 'title'))
+    gb_txns.sort(key=attrgetter('amt', 'ts', 'title'))
 
     # merge chase txns and gb txns
     merged_txns: List[MergedTxn] = []
@@ -32,7 +32,7 @@ def get_txns_grouped(ch_txns: List[ChaseTxn], gb_txns: List[GoodbudgetTxn]) -> T
             merged_txns.append(MergedTxn(gb_txn))
             gb_i += 1
         else:
-            days_apart = (gb_txn._ts - ch_txn._ts) / (60 * 60 * 24)
+            days_apart = (gb_txn.ts - ch_txn.ts) / (60 * 60 * 24)
             if days_apart < (MAX_DAYS_APART * -1):
                 # if gb too far in past, add it by itself
                 merged_txns.append(MergedTxn(gb_txn))

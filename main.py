@@ -35,5 +35,5 @@ write_txns_grouped_to_files(txns_grouped)
 print(f"Saved to: {OUT_DIR}")
 
 if add_txns:
-    last_gb_txn_ts = gb_txns[-1]._ts if len(gb_txns) > 0 else 0
+    last_gb_txn_ts = gb_txns[-1].ts if len(gb_txns) > 0 else 0
     add_new_txns(txns_grouped, last_gb_txn_ts)
