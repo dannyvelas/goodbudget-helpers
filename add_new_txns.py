@@ -1,15 +1,12 @@
 import readline
-from typing import List
+from typing import Dict, List, Union
 
-from dotenv import dotenv_values
 from selenium.webdriver import Chrome
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.select import Select
 
 from datatypes import TxnsGrouped
-ENV = dotenv_values(".env")
-ENVELOPES = dotenv_values(".envelopes.env")
 
 
 class Driver:
@@ -18,11 +15,11 @@ class Driver:
         self.chrome.get('https://goodbudget.com/login')
         self.chrome.implicitly_wait(10)
 
-    def login(self):
+    def login(self, gb_username: str, gb_password: str):
         self.chrome.find_element_by_id(
-            'username').send_keys(ENV["GB_USERNAME"])
+            'username').send_keys(gb_username)
         self.chrome.find_element_by_id(
-            'password').send_keys(ENV["GB_PASSWORD"])
+            'password').send_keys(gb_password)
 
         # login submit button
         self.chrome.find_element_by_xpath(
@@ -34,7 +31,8 @@ class Driver:
     def _click_save_txn(self): self.chrome.find_element_by_id(
         'addTransactionSave').click()
 
-    def add_expense(self, date: str, payee: str, amount: str, envelope: str, note: str):
+    def add_expense(self, envelopes_dict: Dict[str, Union[str, None]],
+                    date: str, payee: str, amount: str, envelope: str, note: str):
         self._click_add_txn()
 
         date_field = self.chrome.find_element_by_id('expense-date')
@@ -53,7 +51,7 @@ class Driver:
         amt_el.send_keys(amount)
 
         Select(self.chrome.find_element_by_xpath('//*[@id="expenseCredit"]/form/fieldset/div[4]/div/select')) \
-            .select_by_value(ENVELOPES[envelope.replace(' ', '_').upper()])
+            .select_by_value(envelopes_dict[envelope.replace(' ', '_').upper()])
 
         if note:
             self.chrome.find_element_by_id('expense-notes').send_keys(note)
@@ -101,6 +99,30 @@ class MatchedTxn:
         self.gb_envelope = gb_envelope
 
 
+def env_completer(envelopes_dict: Dict[str, Union[str, None]]):
+    def index_env(text: str, state: int):
+        options = [
+            x for x in envelopes_dict if x.lower().startswith(text.lower())]
+        try:
+            return options[state]
+        except IndexError:
+            return None
+
+    return index_env
+
+
+def title_completer(matched_txns: List[MatchedTxn]):
+    def index_title(text: str, state: int):
+        options = [matched_txn.gb_title for matched_txn in matched_txns if matched_txn.gb_title.lower(
+        ).startswith(text.lower())]
+        try:
+            return options[state]
+        except IndexError:
+            return None
+
+    return index_title
+
+
 def is_correct_match(matched_txn: MatchedTxn):
     print(
         f'\tTitle: {matched_txn.gb_title}. Envelope: {matched_txn.gb_envelope}')
@@ -114,36 +136,22 @@ def should_add(chase_txn: TrimmedChaseTxn):
     return not answer or answer.lower() in ['y', 'yes']
 
 
-def add_new_txns(txns_grouped: TxnsGrouped, last_gb_txn_ts: int):
-    ##### READLINE CONFIG ########################################################
-    def env_completer(text, state):
-        options = [x for x in ENVELOPES if x.lower().startswith(text.lower())]
-        try:
-            return options[state]
-        except IndexError:
-            return None
-
-    def title_completer(text, state):
-        options = [matched_txn.gb_title for matched_txn in matched_txns if matched_txn.gb_title.lower(
-        ).startswith(text.lower())]
-        try:
-            return options[state]
-        except IndexError:
-            return None
-
+def add_new_txns(txns_grouped: TxnsGrouped, envelopes_dict: Dict[str, Union[str, None]],
+                 gb_username: str, gb_password: str, last_gb_txn_ts: int):
+    # set up tab completion
     readline.parse_and_bind("tab: complete")
-    ##############################################################################
 
     # Cast ChaseTxns to TrimmedChaseTxns
     only_ch_txns = [TrimmedChaseTxn(
         x.ts, x.is_debit, x.is_pending, x.date, x.title, str(x.amt/100)) for x in txns_grouped.only_ch_txns]
 
+    # cast MergedTxns which were matched into MatchedTxns. remove quotes from titles and envelopes
     matched_txns: List[MatchedTxn] = [MatchedTxn(
         x.ch_txn.title, x.gb_txn.title.replace('"', ''), x.gb_txn.envelope.replace('"', ''))
         for x in txns_grouped.both_txns]
 
     driver = Driver()
-    driver.login()
+    driver.login(gb_username, gb_password)
 
     # add each txn
     for txn in only_ch_txns:
@@ -164,11 +172,12 @@ def add_new_txns(txns_grouped: TxnsGrouped, last_gb_txn_ts: int):
                 try:
                     new_gb_title, new_gb_envelope = similar_txn.gb_title, similar_txn.gb_envelope
                     if not is_correct_match(similar_txn):
-                        readline.set_completer(title_completer)
+                        readline.set_completer(title_completer(matched_txns))
                         new_gb_title = input('\tTitle: ')
 
                         if txn.is_debit:
-                            readline.set_completer(env_completer)
+                            readline.set_completer(
+                                env_completer(envelopes_dict))
                             new_gb_envelope = input('\tEnvelope: ')
 
                         # add this new txn to `matched_txns` so that it could be guessed as a `similar_txn` for a future `txn`
@@ -184,16 +193,7 @@ def add_new_txns(txns_grouped: TxnsGrouped, last_gb_txn_ts: int):
 
             # run selenium code to add to GB
             if txn.is_debit:
-                driver.add_expense(txn.date, new_gb_title,
+                driver.add_expense(envelopes_dict, txn.date, new_gb_title,
                                    txn.amt, new_gb_envelope, new_note)
             else:
                 driver.add_income(txn.date, new_gb_title, txn.amt, new_note)
-
-    # print amts
-    amt_pending = 0
-    for txn in txns_grouped.only_ch_txns:
-        if txn.ts > last_gb_txn_ts and txn.is_pending:
-            amt_pending += txn.amt
-
-    print(
-        f"\nAll done! Dollar amount not added from pending txns: ${amt_pending/100}", end='')

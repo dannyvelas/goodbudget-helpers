@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Tuple, Union
+from typing import List, Union
 
 
 class TxnType(Enum):
@@ -46,18 +46,11 @@ class MergedTxn:
 
         self.bal_diff = 0
 
-    def to_ts_and_title_tuple(self) -> Union[Tuple[int, int, str, str], Tuple[int, int, str]]:
-        if self.type_ == TxnType.BOTH:
-            return (self.ch_txn.ts, self.gb_txn.ts, self.ch_txn.title, self.gb_txn.title)
-        else:
-            my_txn = self.ch_txn if self.type_ == TxnType.CHASE else self.gb_txn
-            return (my_txn.ts, 0, my_txn.title)
-
 
 class BalanceDifferenceFrequency:
-    def __init__(self, vals: Tuple[int, int]):
-        self.balance = vals[0]
-        self.frequency = vals[1]
+    def __init__(self, balance: int, frequency: int):
+        self.balance = balance
+        self.frequency = frequency
 
 
 class TxnsGrouped:
