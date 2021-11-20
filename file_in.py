@@ -1,6 +1,6 @@
 from datetime import datetime as dt
 import re
-from typing import List
+from typing import List, TypeVar, Generic
 from regex import CH_REGEX, GB_INCOME_REGEX, GB_EXPENSE_REGEX
 
 from datatypes import ChaseTxn, GoodbudgetTxn
@@ -19,10 +19,19 @@ def _shorten(string: str) -> str:
     return string
 
 
-def read_ch_txns() -> List[ChaseTxn]:
+T = TypeVar('T', ChaseTxn, GoodbudgetTxn)
+
+
+class ReadResults(Generic[T]):
+    def __init__(self, txns: List[T], lines_failed: List[str]):
+        self.txns = txns
+        self.lines_failed = lines_failed
+
+
+def read_ch_txns() -> ReadResults[ChaseTxn]:
     txns: List[ChaseTxn] = []
+    lines_failed: List[str] = []
     with open(IN_CH_FILE) as in_file:
-        amt_unmatched = 0
         for line in in_file:
             if (txn := CH_REGEX.match(line)):
                 txn = txn.groupdict()
@@ -35,18 +44,15 @@ def read_ch_txns() -> List[ChaseTxn]:
                     amt=int(txn['amt'].replace(".", ''))
                 ))
             else:
-                amt_unmatched += 1
-                print(f'No match: {line}', end='')
+                lines_failed.append(line)
 
-    print(f"Didn't match {amt_unmatched} lines\n")
-
-    return txns
+    return ReadResults(txns, lines_failed)
 
 
-def read_gb_txns() -> List[GoodbudgetTxn]:
+def read_gb_txns() -> ReadResults[GoodbudgetTxn]:
     txns: List[GoodbudgetTxn] = []
+    lines_failed: List[str] = []
     with open(IN_GB_FILE) as in_file:
-        amt_unmatched = 0
         for line in in_file:
             if (txn := GB_EXPENSE_REGEX.match(line)) or (txn := GB_INCOME_REGEX.match(line)):
                 txn = txn.groupdict()
@@ -61,9 +67,6 @@ def read_gb_txns() -> List[GoodbudgetTxn]:
                             .replace(".", ''))
                 ))
             else:
-                amt_unmatched += 1
-                print(f'No match: {line}', end='')
+                lines_failed.append(line)
 
-    print(f"Didn't match {amt_unmatched} lines\n")
-
-    return txns
+    return ReadResults(txns, lines_failed)

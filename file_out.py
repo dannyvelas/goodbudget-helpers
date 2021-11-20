@@ -1,5 +1,6 @@
 from datetime import datetime as dt
 from pathlib import Path
+from typing import List
 
 from datatypes import (
     BalanceDifferenceFrequency,
@@ -51,7 +52,29 @@ def _bal_and_freq_to_row(bal_and_freq: BalanceDifferenceFrequency) -> str:
     return f'{bal_and_freq.balance / 100},{bal_and_freq.frequency}'
 
 
-def write_txns_grouped(txns_grouped: TxnsGrouped):
+def log_lines_failed(lines_failed: List[str]) -> None:
+    Path(OUT_DIR).mkdir(exist_ok=True)
+
+    with open(OUT_LOG_FILE, 'w') as out_file:
+        out_file.write(f'Didn\'t match {len(lines_failed)} lines:\n')
+        for line in lines_failed:
+            out_file.write(f'{line}\n')
+
+        out_file.write('\n\n')
+
+
+def log_amt_matched_and_unmatched(txns_grouped: TxnsGrouped) -> None:
+    Path(OUT_DIR).mkdir(exist_ok=True)
+
+    with open(OUT_LOG_FILE, 'w') as out_file:
+        out_file.write(
+            f'AMT OF UNMATCHED CHASE TXNS: {len(txns_grouped.only_ch_txns)}\n')
+        out_file.write(
+            f'AMT OF UNMATCHED GOODBUDGET TXNS: {len(txns_grouped.only_gb_txns)}\n')
+        out_file.write(f'AMT OF MATCHED TXNS: {len(txns_grouped.both_txns)}\n')
+
+
+def write_txns_grouped(txns_grouped: TxnsGrouped) -> None:
     Path(OUT_DIR).mkdir(exist_ok=True)
 
     with open(OUT_CH_FILE, 'w') as out_file:
@@ -73,14 +96,3 @@ def write_txns_grouped(txns_grouped: TxnsGrouped):
     with open(OUT_BAL_DIFF_FREQ_FILE, 'w') as out_file:
         for bal_and_freq in txns_grouped.bal_diff_freq:
             out_file.write(f"{_bal_and_freq_to_row(bal_and_freq)}\n")
-
-
-def log_amt_matched_and_unmatched(txns_grouped: TxnsGrouped):
-    Path(OUT_DIR).mkdir(exist_ok=True)
-
-    with open(OUT_LOG_FILE, 'w') as out_file:
-        out_file.write(
-            f'AMT OF UNMATCHED CHASE TXNS: {len(txns_grouped.only_ch_txns)}\n')
-        out_file.write(
-            f'AMT OF UNMATCHED GOODBUDGET TXNS: {len(txns_grouped.only_gb_txns)}\n')
-        out_file.write(f'AMT OF MATCHED TXNS: {len(txns_grouped.both_txns)}\n')

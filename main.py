@@ -5,7 +5,7 @@ from dotenv import dotenv_values
 from add_new_txns import add_new_txns
 from config import Config
 from file_in import read_ch_txns, read_gb_txns
-from file_out import OUT_DIR, write_txns_grouped, log_amt_matched_and_unmatched
+from file_out import OUT_DIR, log_amt_matched_and_unmatched, write_txns_grouped, log_lines_failed
 from match import get_txns_grouped
 
 ENV = dotenv_values(".env")
@@ -31,8 +31,14 @@ while i < len(sys.argv):
         exit(1)
     i += 1
 
-ch_txns = read_ch_txns()
-gb_txns = read_gb_txns()
+ch_txns_result = read_ch_txns()
+gb_txns_result = read_gb_txns()
+
+log_lines_failed(ch_txns_result.lines_failed)
+log_lines_failed(gb_txns_result.lines_failed)
+
+ch_txns = ch_txns_result.txns
+gb_txns = gb_txns_result.txns
 
 txns_grouped = get_txns_grouped(
     ch_txns, gb_txns, config.ch_start_bal, config.gb_start_bal, MAX_DAYS_APART)
