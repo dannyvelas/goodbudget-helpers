@@ -55,10 +55,10 @@ def _bal_and_freq_to_row(bal_and_freq: BalanceDifferenceFrequency) -> str:
 def log_lines_failed(lines_failed: List[str]) -> None:
     Path(OUT_DIR).mkdir(exist_ok=True)
 
-    with open(OUT_LOG_FILE, 'w') as out_file:
-        out_file.write(f'Didn\'t match {len(lines_failed)} lines:\n')
+    with open(OUT_LOG_FILE, 'a') as out_file:
+        out_file.write(f'Didn\'t parse {len(lines_failed)} lines:\n')
         for line in lines_failed:
-            out_file.write(f'{line}\n')
+            out_file.write(f'{line}')
 
         out_file.write('\n\n')
 
@@ -66,7 +66,7 @@ def log_lines_failed(lines_failed: List[str]) -> None:
 def log_amt_matched_and_unmatched(txns_grouped: TxnsGrouped) -> None:
     Path(OUT_DIR).mkdir(exist_ok=True)
 
-    with open(OUT_LOG_FILE, 'w') as out_file:
+    with open(OUT_LOG_FILE, 'a') as out_file:
         out_file.write(
             f'AMT OF UNMATCHED CHASE TXNS: {len(txns_grouped.only_ch_txns)}\n')
         out_file.write(
