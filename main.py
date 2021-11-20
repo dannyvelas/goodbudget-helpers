@@ -5,7 +5,7 @@ from dotenv import dotenv_values
 from add_new_txns import add_new_txns
 from config import Config
 from file_in import read_ch_txns, read_gb_txns
-from file_out import OUT_DIR, write_txns_grouped_to_files
+from file_out import OUT_DIR, write_txns_grouped, log_amt_matched_and_unmatched
 from match import get_txns_grouped
 
 ENV = dotenv_values(".env")
@@ -37,12 +37,8 @@ gb_txns = read_gb_txns()
 txns_grouped = get_txns_grouped(
     ch_txns, gb_txns, config.ch_start_bal, config.gb_start_bal, MAX_DAYS_APART)
 
-# print some helpful numbers
-print(f'AMT OF UNMATCHED CHASE TXNS: {len(txns_grouped.only_ch_txns)}')
-print(f'AMT OF UNMATCHED GOODBUDGET TXNS: {len(txns_grouped.only_gb_txns)}')
-print(f'AMT OF MATCHED TXNS: {len(txns_grouped.both_txns)}\n')
-
-write_txns_grouped_to_files(txns_grouped)
+log_amt_matched_and_unmatched(txns_grouped)
+write_txns_grouped(txns_grouped)
 
 print(f"Saved to: {OUT_DIR}")
 
