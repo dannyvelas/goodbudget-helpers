@@ -26,14 +26,14 @@ def read_ch_txns() -> List[ChaseTxn]:
         for line in in_file:
             if (txn := CH_REGEX.match(line)):
                 txn = txn.groupdict()
-                txns.append(ChaseTxn(**{
-                    'ts': int(dt.strptime(txn['date'], "%m/%d/%Y").timestamp()),
-                    'is_debit': txn['deb_or_cred'] == 'DEBIT',
-                    'is_pending': txn['balance'] == ' ',
-                    'date': txn['date'],
-                    'title':  _shorten(txn['title']),
-                    'amt': int(txn['amt'].replace('"', '').replace(",", '').replace(".", ''))
-                }))
+                txns.append(ChaseTxn(
+                    ts=int(dt.strptime(txn['date'], "%m/%d/%Y").timestamp()),
+                    is_debit=txn['deb_or_cred'] == 'DEBIT',
+                    is_pending=txn['balance'] == ' ',
+                    date=txn['date'],
+                    title=_shorten(txn['title']),
+                    amt=int(txn['amt'].replace(".", ''))
+                ))
             else:
                 amt_unmatched += 1
                 print(f'No match: {line}', end='')
@@ -50,13 +50,16 @@ def read_gb_txns() -> List[GoodbudgetTxn]:
         for line in in_file:
             if (txn := GB_EXPENSE_REGEX.match(line)) or (txn := GB_INCOME_REGEX.match(line)):
                 txn = txn.groupdict()
-                txns.append(GoodbudgetTxn(**{
-                    'ts': int(dt.strptime(txn['date'], "%m/%d/%Y").timestamp()),
-                    'date': txn['date'],
-                    'title':  _shorten(txn['title']),
-                    'envelope': txn['envelope'],
-                    'amt': int(txn['amt'].replace('"', '').replace(",", '').replace(".", ''))
-                }))
+                txns.append(GoodbudgetTxn(
+                    ts=int(dt.strptime(txn['date'], "%m/%d/%Y").timestamp()),
+                    date=txn['date'],
+                    title=_shorten(txn['title']),
+                    envelope=txn['envelope'],
+                    amt=int(txn['amt']
+                            .replace('"', '')
+                            .replace(",", '')
+                            .replace(".", ''))
+                ))
             else:
                 amt_unmatched += 1
                 print(f'No match: {line}', end='')
