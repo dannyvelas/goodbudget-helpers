@@ -5,7 +5,12 @@ from dotenv import dotenv_values
 from add_new_txns import add_new_txns
 from config import Config
 from file_in import read_ch_txns, read_gb_txns
-from file_out import OUT_DIR, log_amt_matched_and_unmatched, write_txns_grouped, log_lines_failed
+from file_out import (
+    OUT_DIR,
+    log_amt_matched_and_unmatched,
+    log_lines_failed,
+    write_txns_grouped,
+)
 from match import get_txns_grouped
 
 ENV = dotenv_values(".env")
@@ -54,7 +59,7 @@ if add_txns:
         print("Error, no .envelopes.env file found.")
         exit(1)
 
-    last_gb_txn_ts = gb_txns[-1].ts if len(gb_txns) > 0 else 0
+    last_gb_txn_ts = gb_txns[0].ts if len(gb_txns) > 0 else 0
 
     add_new_txns(txns_grouped, ENVELOPES, config.gb_username,
                  config.gb_password, last_gb_txn_ts)

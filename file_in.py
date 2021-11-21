@@ -1,22 +1,22 @@
 from datetime import datetime as dt
 import re
-from typing import List, TypeVar, Generic
-from regex import CH_REGEX, GB_INCOME_REGEX, GB_EXPENSE_REGEX
+from typing import Generic, List, TypeVar
 
 from datatypes import ChaseTxn, GoodbudgetTxn
+from regex import CH_REGEX, GB_EXPENSE_REGEX, GB_INCOME_REGEX
 
 IN_CH_FILE = './in/chase.csv'
 IN_GB_FILE = './in/goodbudget.csv'
 
 
-def _shorten(string: str) -> str:
-    string = re.sub(r',', '', string)
-    string = re.sub(r'\s+', ' ', string)
-    string = string[0:26]
-    if ' ' in string and string[-1] != '"':
-        string += '"'
+def _shorten(s: str) -> str:
+    s = re.sub(r',', '', s)
+    s = re.sub(r'\s+', ' ', s)
+    s = s[0:26]
+    if ' ' in s and s[-1] != '"':
+        s += '"'
 
-    return string
+    return s
 
 
 T = TypeVar('T', ChaseTxn, GoodbudgetTxn)

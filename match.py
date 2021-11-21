@@ -25,14 +25,14 @@ def _sort_merged_txns(merged_txns: List[MergedTxn]) -> List[MergedTxn]:
 def get_txns_grouped(ch_txns: List[ChaseTxn], gb_txns: List[GoodbudgetTxn],
                      ch_start_bal: int, gb_start_bal: int, max_days_apart: int) -> TxnsGrouped:
     # sort by amount
-    ch_txns.sort(key=attrgetter('amt', 'ts', 'title'))
-    gb_txns.sort(key=attrgetter('amt', 'ts', 'title'))
+    ch_sorted = sorted(ch_txns, key=attrgetter('amt', 'ts', 'title'))
+    gb_sorted = sorted(gb_txns, key=attrgetter('amt', 'ts', 'title'))
 
     # merge chase txns and gb txns
     merged_txns: List[MergedTxn] = []
     ch_i, gb_i = 0, 0
-    while ch_i < len(ch_txns) and gb_i < len(gb_txns):
-        ch_txn, gb_txn = ch_txns[ch_i], gb_txns[gb_i]
+    while ch_i < len(ch_sorted) and gb_i < len(gb_sorted):
+        ch_txn, gb_txn = ch_sorted[ch_i], gb_sorted[gb_i]
         if ch_txn.amt < gb_txn.amt:
             merged_txns.append(MergedTxn(ch_txn))
             ch_i += 1
@@ -56,11 +56,11 @@ def get_txns_grouped(ch_txns: List[ChaseTxn], gb_txns: List[GoodbudgetTxn],
 
     # if there are some txns left in one list but not the other,
     # add those txns individually
-    while ch_i < len(ch_txns):
-        merged_txns.append(MergedTxn(ch_txns[ch_i]))
+    while ch_i < len(ch_sorted):
+        merged_txns.append(MergedTxn(ch_sorted[ch_i]))
         ch_i += 1
-    while gb_i < len(gb_txns):
-        merged_txns.append(MergedTxn(gb_txns[gb_i]))
+    while gb_i < len(gb_sorted):
+        merged_txns.append(MergedTxn(gb_sorted[gb_i]))
         gb_i += 1
 
     # sort by date and title
@@ -91,7 +91,8 @@ def get_txns_grouped(ch_txns: List[ChaseTxn], gb_txns: List[GoodbudgetTxn],
     # sort by balance differences that occur the most and store in its own class
     bal_diff_freq_sorted = [BalanceDifferenceFrequency(x[0], x[1])
                             for x in sorted(bal_diff_freq.items(),
-                            key=lambda item: item[1], reverse=True)]
+                                            key=lambda item: item[1],
+                                            reverse=True)]
 
     # split merged_txns into 3 different lists
     only_ch_txns: List[ChaseTxn] = []
