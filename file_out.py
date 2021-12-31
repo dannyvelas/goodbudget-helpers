@@ -24,14 +24,14 @@ _AMT_CH_FIELDS = 4
 
 
 def _ch_txn_to_row(ch_txn: ChaseTxn):
-    return f'{ch_txn.date},{ch_txn.title},{ch_txn.amt},{ch_txn.bal}'
+    return f'{ch_txn.date},{ch_txn.title},{ch_txn.amt_dollars},{ch_txn.bal/100}'
 
 
 _AMT_GB_FIELDS = 5
 
 
 def _gb_txn_to_row(gb_txn: GoodbudgetTxn):
-    return f'{gb_txn.date},{gb_txn.title},{gb_txn.envelope},{gb_txn.amt},{gb_txn.bal}'
+    return f'{gb_txn.date},{gb_txn.title},{gb_txn.envelope},{gb_txn.amt_dollars},{gb_txn.bal/100}'
 
 
 def _merged_txn_to_row(merged_txn: MergedTxn):
@@ -45,11 +45,11 @@ def _merged_txn_to_row(merged_txn: MergedTxn):
     else:
         gb_row = ',' * (_AMT_GB_FIELDS - 1)
 
-    return ','.join([merged_txn.type_.name, ch_row, gb_row, str(merged_txn.bal_diff / 100)])
+    return ','.join([merged_txn.type_.name, ch_row, gb_row, str(merged_txn.bal_diff/100)])
 
 
 def _bal_and_freq_to_row(bal_and_freq: BalanceDifferenceFrequency) -> str:
-    return f'{bal_and_freq.balance / 100},{bal_and_freq.frequency}'
+    return f'{bal_and_freq.balance/100},{bal_and_freq.frequency}'
 
 
 def log_lines_failed(lines_failed: List[str]) -> None:

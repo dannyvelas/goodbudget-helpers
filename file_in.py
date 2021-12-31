@@ -41,7 +41,7 @@ def read_ch_txns() -> ReadResults[ChaseTxn]:
                     is_pending=txn['balance'] == ' ',
                     date=txn['date'],
                     title=_shorten(txn['title']),
-                    amt=int(txn['amt'].replace(".", ''))
+                    amt_dollars=txn['amt']
                 ))
             else:
                 lines_failed.append(line)
@@ -61,10 +61,8 @@ def read_gb_txns() -> ReadResults[GoodbudgetTxn]:
                     date=txn['date'],
                     title=_shorten(txn['title']),
                     envelope=txn['envelope'],
-                    amt=int(txn['amt']
-                            .replace('"', '')
-                            .replace(",", '')
-                            .replace(".", ''))
+                    amt_dollars=txn['amt'],
+                    notes=txn['notes']
                 ))
             else:
                 lines_failed.append(line)

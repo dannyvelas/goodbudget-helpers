@@ -2,6 +2,13 @@ from enum import Enum
 from typing import List, Union
 
 
+def _dollars_to_cents(dollars: str):
+    return int(dollars
+               .replace('"', '')
+               .replace(",", '')
+               .replace(".", ''))
+
+
 class TxnType(Enum):
     CHASE = 'ch'
     GOODBUDGET = 'gb'
@@ -9,23 +16,28 @@ class TxnType(Enum):
 
 
 class ChaseTxn:
-    def __init__(self, ts: int, is_debit: bool, is_pending: bool, date: str, title: str, amt: int):
+    def __init__(self, ts: int, is_debit: bool, is_pending: bool, date: str,
+                 title: str, amt_dollars: str):
         self.ts = ts
         self.is_debit = is_debit
         self.is_pending = is_pending
         self.date = date
         self.title = title
-        self.amt = amt
+        self.amt_dollars = amt_dollars
+        self.amt_cents = _dollars_to_cents(amt_dollars)
         self.bal = 0
 
 
 class GoodbudgetTxn:
-    def __init__(self, ts: int, date: str, title: str, envelope: str, amt: int):
+    def __init__(self, ts: int, date: str, title: str, envelope: str,
+                 amt_dollars: str, notes: str):
         self.ts = ts
         self.date = date
         self.title = title
         self.envelope = envelope
-        self.amt = amt
+        self.amt_dollars = amt_dollars
+        self.amt_cents = _dollars_to_cents(amt_dollars)
+        self.notes = notes
         self.bal = 0
 
 

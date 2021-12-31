@@ -23,20 +23,21 @@ def _sort_merged_txns(merged_txns: List[MergedTxn]) -> List[MergedTxn]:
 
 
 def get_txns_grouped(ch_txns: List[ChaseTxn], gb_txns: List[GoodbudgetTxn],
-                     ch_start_bal: int, gb_start_bal: int, max_days_apart: int) -> TxnsGrouped:
+                     ch_start_bal: int, gb_start_bal: int,
+                     max_days_apart: int) -> TxnsGrouped:
     # sort by amount
-    ch_sorted = sorted(ch_txns, key=attrgetter('amt', 'ts', 'title'))
-    gb_sorted = sorted(gb_txns, key=attrgetter('amt', 'ts', 'title'))
+    ch_sorted = sorted(ch_txns, key=attrgetter('amt_cents', 'ts', 'title'))
+    gb_sorted = sorted(gb_txns, key=attrgetter('amt_cents', 'ts', 'title'))
 
     # merge chase txns and gb txns
     merged_txns: List[MergedTxn] = []
     ch_i, gb_i = 0, 0
     while ch_i < len(ch_sorted) and gb_i < len(gb_sorted):
         ch_txn, gb_txn = ch_sorted[ch_i], gb_sorted[gb_i]
-        if ch_txn.amt < gb_txn.amt:
+        if ch_txn.amt_cents < gb_txn.amt_cents:
             merged_txns.append(MergedTxn(ch_txn))
             ch_i += 1
-        elif ch_txn.amt > gb_txn.amt:
+        elif ch_txn.amt_cents > gb_txn.amt_cents:
             merged_txns.append(MergedTxn(gb_txn))
             gb_i += 1
         else:
@@ -66,15 +67,15 @@ def get_txns_grouped(ch_txns: List[ChaseTxn], gb_txns: List[GoodbudgetTxn],
     # sort by date and title
     merged_txns = _sort_merged_txns(merged_txns)
 
-    # set SingleTxn.bal and MergedTxn.bal_diff
+    # set bal and MergedTxn.bal_diff
     bal_diff_freq: Dict[int, int] = {}
     ch_bal, gb_bal = ch_start_bal, gb_start_bal
     for merged_txn in merged_txns:
         if merged_txn.type_ in [TxnType.CHASE, TxnType.BOTH]:
-            ch_bal += merged_txn.ch_txn.amt
+            ch_bal += merged_txn.ch_txn.amt_cents
             merged_txn.ch_txn.bal = ch_bal
         if merged_txn.type_ in [TxnType.GOODBUDGET, TxnType.BOTH]:
-            gb_bal += merged_txn.gb_txn.amt
+            gb_bal += merged_txn.gb_txn.amt_cents
             merged_txn.gb_txn.bal = gb_bal
 
         # store in dict:

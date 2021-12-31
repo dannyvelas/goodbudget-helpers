@@ -13,7 +13,7 @@ _GB_INCOME_REGEX_STR = (r'(?P<date>\d\d\/\d\d\/\d{4})'  # DATE
                         r',(?P<envelope>)'              # ENVELOPE
                         r',"Chase Account"'             # ACCOUNT
                         r',(?P<title>"[^"]+"|[^,]+)'    # TITLE
-                        r',("[^"]+"|[^,]*)'             # NOTES
+                        r',(?P<notes>"[^"]+"|[^,]*)'    # NOTES
                         r','                            # CHECK_NUM
                         r',(?P<amt>"[^"]+"|[^,]+)'      # AMT
                         r',(CLR)?'                      # STATUS
@@ -24,7 +24,7 @@ _GB_EXPENSE_REGEX_STR = (r'(?P<date>\d\d\/\d\d\/\d{4})'  # DATE
                          r',(?P<envelope>"[^"]+"|[A-Za-z]+|\[Unallocated\])'
                          r',"Chase Account"'             # ACCOUNT
                          r',(?P<title>"[^"]+"|[^,]+)'    # TITLE
-                         r',("[^"]+"|[^,]*)'             # NOTES
+                         r',(?P<notes>"[^"]+"|[^,]*)'    # NOTES
                          r','                            # CHECK_NUM
                          r',(?P<amt>"[^"]+"|[^,]+)'      # AMT
                          r',(CLR)?'                      # STATUS

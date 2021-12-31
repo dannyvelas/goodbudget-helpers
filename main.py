@@ -22,17 +22,14 @@ config = Config(ENV)
 
 MAX_DAYS_APART = 7
 add_txns = False
-graph = False
 
 i = 1
 while i < len(sys.argv):
     arg = sys.argv[i]
     if arg == "--add" and not add_txns:
         add_txns = True
-    elif arg == "--graph" and not graph:
-        graph = True
     else:
-        print("usage: python3 main.py [--add] [--graph]")
+        print("usage: python3 main.py [--add]")
         exit(1)
     i += 1
 
@@ -68,7 +65,7 @@ if add_txns:
     amt_pending = 0
     for txn in txns_grouped.only_ch_txns:
         if txn.ts > last_gb_txn_ts and txn.is_pending:
-            amt_pending += txn.amt
+            amt_pending += txn.amt_cents
 
     print(
         f"\nAll done! Dollar amount not added from pending txns: ${amt_pending/100}")
