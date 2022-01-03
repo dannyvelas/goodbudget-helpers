@@ -11,6 +11,7 @@ from datatypes import (
 )
 
 OUT_DIR = f'./out/{dt.now().strftime("%Y-%m-%dT%H:%M")}'
+Path(OUT_DIR).mkdir(exist_ok=True)
 
 OUT_CH_FILE = f'{OUT_DIR}/chase.csv'
 OUT_GB_FILE = f'{OUT_DIR}/goodbudget.csv'
@@ -53,8 +54,6 @@ def _bal_and_freq_to_row(bal_and_freq: BalanceDifferenceFrequency) -> str:
 
 
 def log_lines_failed(lines_failed: List[str]) -> None:
-    Path(OUT_DIR).mkdir(exist_ok=True)
-
     with open(OUT_LOG_FILE, 'a') as out_file:
         out_file.write(f'Didn\'t parse {len(lines_failed)} lines:\n')
         for line in lines_failed:
@@ -64,8 +63,6 @@ def log_lines_failed(lines_failed: List[str]) -> None:
 
 
 def log_amt_matched_and_unmatched(txns_grouped: TxnsGrouped) -> None:
-    Path(OUT_DIR).mkdir(exist_ok=True)
-
     with open(OUT_LOG_FILE, 'a') as out_file:
         out_file.write(
             f'AMT OF UNMATCHED CHASE TXNS: {len(txns_grouped.only_ch_txns)}\n')
@@ -75,8 +72,6 @@ def log_amt_matched_and_unmatched(txns_grouped: TxnsGrouped) -> None:
 
 
 def write_txns_grouped(txns_grouped: TxnsGrouped) -> None:
-    Path(OUT_DIR).mkdir(exist_ok=True)
-
     with open(OUT_CH_FILE, 'w') as out_file:
         for txn in txns_grouped.only_ch_txns:
             out_file.write(f"{_ch_txn_to_row(txn)}\n")
