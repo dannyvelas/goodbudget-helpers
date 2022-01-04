@@ -1,9 +1,11 @@
 import sys
+from typing import List
 
 from dotenv import dotenv_values
 
 from add_new_txns import add_new_txns
 from config import Config
+from datatypes import GoodbudgetTxn
 from file_in import read_ch_txns, read_gb_txns
 from file_out import (
     OUT_DIR,
@@ -13,23 +15,28 @@ from file_out import (
 )
 from match import get_txns_grouped
 
+# set constants
+MAX_DAYS_APART = 7
+
+# load config
 ENV = dotenv_values(".env")
 if not ENV:
     print("Error, no .env file found.")
     exit(1)
-
 config = Config(ENV)
 
-MAX_DAYS_APART = 7
+# parse cmd-line args
 add_txns = False
-
+graph = False
 i = 1
 while i < len(sys.argv):
     arg = sys.argv[i]
     if arg == "--add" and not add_txns:
         add_txns = True
+    elif arg == "--graph" and not graph:
+        graph = True
     else:
-        print("usage: python3 main.py [--add]")
+        print("usage: python3 main.py [--add] [--graph]")
         exit(1)
     i += 1
 
@@ -50,6 +57,7 @@ write_txns_grouped(txns_grouped)
 
 print(f"Saved to: {OUT_DIR}")
 
+gb_txns_added: List[GoodbudgetTxn] = []
 if add_txns:
     ENVELOPES = dotenv_values(".envelopes.env")
     if not ENVELOPES:
@@ -58,8 +66,8 @@ if add_txns:
 
     last_gb_txn_ts = gb_txns[0].ts if len(gb_txns) > 0 else 0
 
-    add_new_txns(txns_grouped, ENVELOPES, config.gb_username,
-                 config.gb_password, last_gb_txn_ts)
+    gb_txns_added = add_new_txns(txns_grouped, ENVELOPES, config.gb_username,
+                                 config.gb_password, last_gb_txn_ts)
 
     # print amts
     amt_pending = 0
@@ -69,3 +77,10 @@ if add_txns:
 
     print(
         f"\nAll done! Dollar amount not added from pending txns: ${amt_pending/100}")
+
+if graph:
+    txns_to_graph = gb_txns + gb_txns_added
+    # TODO
+    # while True:
+    #    selection = graphpy.show_selections()
+    #    graphpy(selection, txns_to_graph)
