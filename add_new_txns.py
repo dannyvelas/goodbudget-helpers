@@ -141,13 +141,15 @@ def add_new_txns(txns_grouped: TxnsGrouped,
                  gb_username: str,
                  gb_password: str,
                  last_gb_txn_ts: int) -> List[GoodbudgetTxn]:
-    # set up tab completion
-    readline.parse_and_bind("tab: complete")
-
     # cast MergedTxns which were matched into MatchedTxns. remove quotes from titles and envelopes
     matched_txns: List[MatchedTxn] = [MatchedTxn(
         x.ch_txn.title, x.gb_txn.title.replace('"', ''), x.gb_txn.envelope.replace('"', ''))
         for x in txns_grouped.both_txns]
+
+    # set up tab completion
+    readline.parse_and_bind("tab: complete")
+    title_completer_injected = title_completer(matched_txns)
+    env_completer_injected = env_completer(envelopes_dict)
 
     driver = Driver()
     driver.login(gb_username, gb_password)
@@ -174,12 +176,11 @@ def add_new_txns(txns_grouped: TxnsGrouped,
                     gb_envelope = similar_txn.gb_envelope if similar_txn else ""
 
                     if similar_txn is None or not is_correct_match(similar_txn):
-                        readline.set_completer(title_completer(matched_txns))
+                        readline.set_completer(title_completer_injected)
                         gb_title = input('\tTitle: ')
 
                         if txn.is_debit:
-                            readline.set_completer(
-                                env_completer(envelopes_dict))
+                            readline.set_completer(env_completer_injected)
                             gb_envelope = input('\tEnvelope: ')
 
                         # add this new txn to `matched_txns` so that it could
