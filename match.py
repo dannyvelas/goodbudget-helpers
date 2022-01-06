@@ -1,6 +1,5 @@
-from operator import attrgetter
 from functools import cmp_to_key
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List
 
 from datatypes import (
     BalanceDifferenceFrequency,
@@ -18,12 +17,11 @@ def _sort_merged_txns(merged_txns: List[MergedTxn]) -> List[MergedTxn]:
             if txn.type_ == TxnType.CHASE:
                 return txn.ch_txn.ts
             else:
-                assert txn.type_ == TxnType.GOODBUDGET
                 return txn.gb_txn.ts
 
         if txn_1.type_ != TxnType.CHASE and txn_2.type_ != TxnType.CHASE:
             return -1 if txn_1.gb_txn.id_ > txn_2.gb_txn.id_ else 1
-        elif txn_1.type_ != TxnType.GOODBUDGET and txn_2.type_ != TxnType.GOODBUDGET:
+        elif txn_1.type_ == TxnType.CHASE and txn_2.type_ == TxnType.CHASE:
             return -1 if txn_1.ch_txn.id_ > txn_2.ch_txn.id_ else 1
         else:
             txn_1_ts = get_ts(txn_1)
