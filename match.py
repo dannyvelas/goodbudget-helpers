@@ -1,4 +1,5 @@
 from operator import attrgetter
+from functools import cmp_to_key
 from typing import Dict, List, Tuple, Union
 
 from datatypes import (
@@ -12,22 +13,37 @@ from datatypes import (
 
 
 def _sort_merged_txns(merged_txns: List[MergedTxn]) -> List[MergedTxn]:
-    def to_ts_title_tuple(merged_txn: MergedTxn) -> Union[Tuple[int, int, str, str], Tuple[int, int, str]]:
-        if merged_txn.type_ == TxnType.BOTH:
-            return (merged_txn.ch_txn.ts, merged_txn.gb_txn.ts, merged_txn.ch_txn.title, merged_txn.gb_txn.title)
-        else:
-            my_txn = merged_txn.ch_txn if merged_txn.type_ == TxnType.CHASE else merged_txn.gb_txn
-            return (my_txn.ts, 0, my_txn.title)
+    def compare(txn_1: MergedTxn, txn_2: MergedTxn):
+        def get_ts(txn: MergedTxn):
+            if txn.type_ == TxnType.CHASE:
+                return txn.ch_txn.ts
+            else:
+                assert txn.type_ == TxnType.GOODBUDGET
+                return txn.gb_txn.ts
 
-    return sorted(merged_txns, key=lambda x: to_ts_title_tuple(x))
+        if txn_1.type_ != TxnType.CHASE and txn_2.type_ != TxnType.CHASE:
+            return -1 if txn_1.gb_txn.id_ > txn_2.gb_txn.id_ else 1
+        elif txn_1.type_ != TxnType.GOODBUDGET and txn_2.type_ != TxnType.GOODBUDGET:
+            return -1 if txn_1.ch_txn.id_ > txn_2.ch_txn.id_ else 1
+        else:
+            txn_1_ts = get_ts(txn_1)
+            txn_2_ts = get_ts(txn_2)
+            if txn_1_ts < txn_2_ts:
+                return -1
+            elif txn_1_ts > txn_2_ts:
+                return 1
+            else:
+                return 0
+
+    return sorted(merged_txns, key=cmp_to_key(compare))
 
 
 def get_txns_grouped(ch_txns: List[ChaseTxn], gb_txns: List[GoodbudgetTxn],
                      ch_start_bal: int, gb_start_bal: int,
                      max_days_apart: int) -> TxnsGrouped:
-    # sort by amount
-    ch_sorted = sorted(ch_txns, key=attrgetter('amt_cents', 'ts', 'title'))
-    gb_sorted = sorted(gb_txns, key=attrgetter('amt_cents', 'ts', 'title'))
+    # sort by amount, on a tie, give priority to the earlier txn
+    ch_sorted = sorted(ch_txns, key=lambda x: (x.amt_cents, -x.id_))
+    gb_sorted = sorted(gb_txns, key=lambda x: (x.amt_cents, -x.id_))
 
     # merge chase txns and gb txns
     merged_txns: List[MergedTxn] = []
@@ -64,13 +80,13 @@ def get_txns_grouped(ch_txns: List[ChaseTxn], gb_txns: List[GoodbudgetTxn],
         merged_txns.append(MergedTxn(gb_sorted[gb_i]))
         gb_i += 1
 
-    # sort by date and title
-    merged_txns = _sort_merged_txns(merged_txns)
+    # sort by earliest txn
+    merged_txns_sorted = _sort_merged_txns(merged_txns)
 
     # set bal and MergedTxn.bal_diff
     bal_diff_freq: Dict[int, int] = {}
     ch_bal, gb_bal = ch_start_bal, gb_start_bal
-    for merged_txn in merged_txns:
+    for merged_txn in merged_txns_sorted:
         if merged_txn.type_ in [TxnType.CHASE, TxnType.BOTH]:
             ch_bal += merged_txn.ch_txn.amt_cents
             merged_txn.ch_txn.bal = ch_bal
@@ -99,7 +115,7 @@ def get_txns_grouped(ch_txns: List[ChaseTxn], gb_txns: List[GoodbudgetTxn],
     only_ch_txns: List[ChaseTxn] = []
     only_gb_txns: List[GoodbudgetTxn] = []
     both_txns: List[MergedTxn] = []
-    for txn in merged_txns:
+    for txn in merged_txns_sorted:
         if txn.type_ == TxnType.CHASE:
             only_ch_txns.append(txn.ch_txn)
         elif txn.type_ == TxnType.GOODBUDGET:
@@ -107,9 +123,18 @@ def get_txns_grouped(ch_txns: List[ChaseTxn], gb_txns: List[GoodbudgetTxn],
         else:
             both_txns.append(txn)
 
+    # restore sorting of only_ch_txns and only_gb_txns by using
+    # the id they were given when they were read
+    # reverse=True because the smaller the ID, the newer the txn and
+    # we want the older txns first
+    only_ch_txns_ssorted = sorted(
+        only_ch_txns, key=lambda x: x.id_, reverse=True)
+    only_gb_txns_ssorted = sorted(
+        only_gb_txns, key=lambda x: x.id_, reverse=True)
+
     return TxnsGrouped(
-        only_ch_txns=only_ch_txns,
-        only_gb_txns=only_gb_txns,
+        only_ch_txns=only_ch_txns_ssorted,
+        only_gb_txns=only_gb_txns_ssorted,
         both_txns=both_txns,
-        merged_txns=merged_txns,
+        merged_txns=merged_txns_sorted,
         bal_diff_freq=bal_diff_freq_sorted)

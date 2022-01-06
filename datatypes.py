@@ -16,8 +16,9 @@ class TxnType(Enum):
 
 
 class ChaseTxn:
-    def __init__(self, ts: int, is_debit: bool, is_pending: bool, date: str,
+    def __init__(self, id_: int, ts: int, is_debit: bool, is_pending: bool, date: str,
                  title: str, amt_dollars: str):
+        self.id_ = id_
         self.ts = ts
         self.is_debit = is_debit
         self.is_pending = is_pending
@@ -29,8 +30,9 @@ class ChaseTxn:
 
 
 class GoodbudgetTxn:
-    def __init__(self, ts: int, date: str, title: str, envelope: str,
+    def __init__(self, id_: int, ts: int, date: str, title: str, envelope: str,
                  amt_dollars: str, notes: str):
+        self.id_ = id_
         self.ts = ts
         self.date = date
         self.title = title

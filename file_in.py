@@ -32,10 +32,11 @@ def read_ch_txns() -> ReadResults[ChaseTxn]:
     txns: List[ChaseTxn] = []
     lines_failed: List[str] = []
     with open(IN_CH_FILE) as in_file:
-        for line in in_file:
+        for i, line in enumerate(in_file):
             if (txn := CH_REGEX.match(line)):
                 txn = txn.groupdict()
                 txns.append(ChaseTxn(
+                    id_=i,
                     ts=int(dt.strptime(txn['date'], "%m/%d/%Y").timestamp()),
                     is_debit=txn['deb_or_cred'] == 'DEBIT',
                     is_pending=txn['balance'] == ' ',
@@ -53,10 +54,11 @@ def read_gb_txns() -> ReadResults[GoodbudgetTxn]:
     txns: List[GoodbudgetTxn] = []
     lines_failed: List[str] = []
     with open(IN_GB_FILE) as in_file:
-        for line in in_file:
+        for i, line in enumerate(in_file):
             if (txn := GB_EXPENSE_REGEX.match(line)) or (txn := GB_INCOME_REGEX.match(line)):
                 txn = txn.groupdict()
                 txns.append(GoodbudgetTxn(
+                    id_=i,
                     ts=int(dt.strptime(txn['date'], "%m/%d/%Y").timestamp()),
                     date=txn['date'],
                     title=_shorten(txn['title']),
