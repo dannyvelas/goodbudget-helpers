@@ -19,9 +19,9 @@ run_graph = False
 i = 1
 while i < len(sys.argv):
     arg = sys.argv[i]
-    if arg == "--gen-out" and not (gen_out or graph):
+    if arg == "--gen-out" and not (gen_out or run_graph):
         gen_out = True
-    elif arg == "--add" and not (add_txns or graph):
+    elif arg == "--add" and not (add_txns or run_graph):
         add_txns = True
     elif arg == "--graph" and not (run_graph or gen_out or add_txns):
         run_graph = True
