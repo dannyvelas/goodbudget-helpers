@@ -7,38 +7,44 @@ from datatypes import (
     ChaseTxn,
     GoodbudgetTxn,
     MergedTxn,
+    MergedTxn_ChaseTxn,
+    MergedTxn_GoodbudgetTxn,
     TxnsGrouped,
 )
 
 
 ### Helper Values and Functions #########################################
 
-_AMT_CH_FIELDS = 4
+_AMT_CH_FIELDS = 5
 
 
 def _ch_txn_to_row(ch_txn: ChaseTxn):
-    return f'{ch_txn.date},{ch_txn.title},{ch_txn.amt_dollars},{ch_txn.bal/100}'
+    return f'{ch_txn.id_},{ch_txn.date},{ch_txn.title},{ch_txn.amt_dollars},{ch_txn.bal/100}'
 
 
-_AMT_GB_FIELDS = 5
+_AMT_GB_FIELDS = 6
 
 
 def _gb_txn_to_row(gb_txn: GoodbudgetTxn):
-    return f'{gb_txn.date},{gb_txn.title},{gb_txn.envelope},{gb_txn.amt_dollars},{gb_txn.bal/100}'
+    return f'{gb_txn.id_},{gb_txn.date},{gb_txn.title},{gb_txn.envelope},{gb_txn.amt_dollars},{gb_txn.bal/100}'
 
 
 def _merged_txn_to_row(merged_txn: MergedTxn):
-    if hasattr(merged_txn, 'ch_txn'):
-        ch_row = _ch_txn_to_row(merged_txn.ch_txn)
-    else:
-        ch_row = ',' * (_AMT_CH_FIELDS - 1)
+    txn_type = 'BOTH'
 
-    if hasattr(merged_txn, 'gb_txn'):
-        gb_row = _gb_txn_to_row(merged_txn.gb_txn)
-    else:
+    if isinstance(merged_txn, MergedTxn_ChaseTxn):
+        txn_type = 'CHASE'
         gb_row = ',' * (_AMT_GB_FIELDS - 1)
+    else:
+        gb_row = _gb_txn_to_row(merged_txn.gb_txn)
 
-    return ','.join([merged_txn.type_.name, ch_row, gb_row, str(merged_txn.bal_diff/100)])
+    if isinstance(merged_txn, MergedTxn_GoodbudgetTxn):
+        txn_type = 'GOODBUDGET'
+        ch_row = ',' * (_AMT_CH_FIELDS - 1)
+    else:
+        ch_row = _ch_txn_to_row(merged_txn.ch_txn)
+
+    return ','.join([txn_type, ch_row, gb_row, str(merged_txn.bal_diff/100)])
 
 
 def _bal_and_freq_to_row(bal_and_freq: BalanceDifferenceFrequency) -> str:

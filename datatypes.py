@@ -1,4 +1,3 @@
-from enum import Enum
 from typing import List, Union
 
 
@@ -7,12 +6,6 @@ def _dollars_to_cents(dollars: str):
                .replace('"', '')
                .replace(",", '')
                .replace(".", ''))
-
-
-class TxnType(Enum):
-    CHASE = 'ch'
-    GOODBUDGET = 'gb'
-    BOTH = 'both'
 
 
 class ChaseTxn:
@@ -43,22 +36,27 @@ class GoodbudgetTxn:
         self.bal = 0
 
 
-class MergedTxn:
-    def __init__(self, txn_1: Union[ChaseTxn, GoodbudgetTxn], txn_2: GoodbudgetTxn = None):
-        if txn_1 and txn_2:
-            assert(isinstance(txn_1, ChaseTxn))
-            self.type_ = TxnType.BOTH
-            self.ch_txn: ChaseTxn = txn_1
-            self.gb_txn: GoodbudgetTxn = txn_2
-        elif isinstance(txn_1, ChaseTxn):
-            self.type_ = TxnType.CHASE
-            self.ch_txn: ChaseTxn = txn_1
-        else:
-            assert isinstance(txn_1, GoodbudgetTxn)
-            self.type_ = TxnType.GOODBUDGET
-            self.gb_txn: GoodbudgetTxn = txn_1
-
+class MergedTxn_ChaseTxn:
+    def __init__(self, ch_txn: ChaseTxn):
+        self.ch_txn = ch_txn
         self.bal_diff = 0
+
+
+class MergedTxn_GoodbudgetTxn:
+    def __init__(self, gb_txn: GoodbudgetTxn):
+        self.gb_txn = gb_txn
+        self.bal_diff = 0
+
+
+class MergedTxn_BothTxns:
+    def __init__(self, ch_txn: ChaseTxn, gb_txn: GoodbudgetTxn):
+        self.ch_txn = ch_txn
+        self.gb_txn = gb_txn
+        self.bal_diff = 0
+
+
+MergedTxn = Union[MergedTxn_ChaseTxn,
+                  MergedTxn_GoodbudgetTxn, MergedTxn_BothTxns]
 
 
 class BalanceDifferenceFrequency:
@@ -69,7 +67,7 @@ class BalanceDifferenceFrequency:
 
 class TxnsGrouped:
     def __init__(self, only_ch_txns: List[ChaseTxn], only_gb_txns: List[GoodbudgetTxn],
-                 both_txns: List[MergedTxn], merged_txns: List[MergedTxn],
+                 both_txns: List[MergedTxn_BothTxns], merged_txns: List[MergedTxn],
                  bal_diff_freq: List[BalanceDifferenceFrequency]):
         self.only_ch_txns = only_ch_txns
         self.only_gb_txns = only_gb_txns

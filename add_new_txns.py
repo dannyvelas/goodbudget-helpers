@@ -191,9 +191,8 @@ def add_new_txns(txns_grouped: TxnsGrouped,
 
                     gb_notes = input('\tNote? (none): ')
 
-                    gb_txn = GoodbudgetTxn(
-                        txn.ts, txn.date, gb_title, gb_envelope,
-                        txn.amt_dollars, gb_notes)
+                    gb_txn = GoodbudgetTxn(-1, txn.ts, txn.date, gb_title, gb_envelope,
+                                           txn.amt_dollars, gb_notes)
                     break
                 except EOFError:
                     # if user made a mistake, they press `Ctrl+D`, which will print a

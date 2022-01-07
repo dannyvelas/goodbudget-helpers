@@ -3,10 +3,12 @@ from typing import Dict, List
 
 from datatypes import (
     BalanceDifferenceFrequency,
+    MergedTxn_BothTxns,
     ChaseTxn,
     GoodbudgetTxn,
     MergedTxn,
-    TxnType,
+    MergedTxn_ChaseTxn,
+    MergedTxn_GoodbudgetTxn,
     TxnsGrouped,
 )
 
@@ -14,14 +16,14 @@ from datatypes import (
 def _sort_merged_txns(merged_txns: List[MergedTxn]) -> List[MergedTxn]:
     def compare(txn_1: MergedTxn, txn_2: MergedTxn):
         def get_ts(txn: MergedTxn):
-            if txn.type_ == TxnType.CHASE:
+            if isinstance(txn, MergedTxn_ChaseTxn):
                 return txn.ch_txn.ts
             else:
                 return txn.gb_txn.ts
 
-        if txn_1.type_ != TxnType.CHASE and txn_2.type_ != TxnType.CHASE:
+        if not isinstance(txn_1, MergedTxn_ChaseTxn) and not isinstance(txn_2, MergedTxn_ChaseTxn):
             return -1 if txn_1.gb_txn.id_ > txn_2.gb_txn.id_ else 1
-        elif txn_1.type_ == TxnType.CHASE and txn_2.type_ == TxnType.CHASE:
+        if isinstance(txn_1, MergedTxn_ChaseTxn) and isinstance(txn_2, MergedTxn_ChaseTxn):
             return -1 if txn_1.ch_txn.id_ > txn_2.ch_txn.id_ else 1
         else:
             txn_1_ts = get_ts(txn_1)
@@ -49,46 +51,46 @@ def get_txns_grouped(ch_txns: List[ChaseTxn], gb_txns: List[GoodbudgetTxn],
     while ch_i < len(ch_sorted) and gb_i < len(gb_sorted):
         ch_txn, gb_txn = ch_sorted[ch_i], gb_sorted[gb_i]
         if ch_txn.amt_cents < gb_txn.amt_cents:
-            merged_txns.append(MergedTxn(ch_txn))
+            merged_txns.append(MergedTxn_ChaseTxn(ch_txn))
             ch_i += 1
         elif ch_txn.amt_cents > gb_txn.amt_cents:
-            merged_txns.append(MergedTxn(gb_txn))
+            merged_txns.append(MergedTxn_GoodbudgetTxn(gb_txn))
             gb_i += 1
         else:
             days_apart = (gb_txn.ts - ch_txn.ts) / (60 * 60 * 24)
             if days_apart < (max_days_apart * -1):
                 # if gb too far in past, add it by itself
-                merged_txns.append(MergedTxn(gb_txn))
+                merged_txns.append(MergedTxn_GoodbudgetTxn(gb_txn))
                 gb_i += 1
             elif days_apart > max_days_apart:
                 # if ch too far in past, add it by itself
-                merged_txns.append(MergedTxn(ch_txn))
+                merged_txns.append(MergedTxn_ChaseTxn(ch_txn))
                 ch_i += 1
             else:
-                merged_txns.append(MergedTxn(ch_txn, gb_txn))
+                merged_txns.append(MergedTxn_BothTxns(ch_txn, gb_txn))
                 ch_i += 1
                 gb_i += 1
 
     # if there are some txns left in one list but not the other,
     # add those txns individually
     while ch_i < len(ch_sorted):
-        merged_txns.append(MergedTxn(ch_sorted[ch_i]))
+        merged_txns.append(MergedTxn_ChaseTxn(ch_sorted[ch_i]))
         ch_i += 1
     while gb_i < len(gb_sorted):
-        merged_txns.append(MergedTxn(gb_sorted[gb_i]))
+        merged_txns.append(MergedTxn_GoodbudgetTxn(gb_sorted[gb_i]))
         gb_i += 1
 
     # sort by earliest txn
     merged_txns_sorted = _sort_merged_txns(merged_txns)
 
-    # set bal and MergedTxn.bal_diff
+    # set MergedTxn.bal_diff
     bal_diff_freq: Dict[int, int] = {}
     ch_bal, gb_bal = ch_start_bal, gb_start_bal
     for merged_txn in merged_txns_sorted:
-        if merged_txn.type_ in [TxnType.CHASE, TxnType.BOTH]:
+        if isinstance(merged_txn, (MergedTxn_ChaseTxn, MergedTxn_BothTxns)):
             ch_bal += merged_txn.ch_txn.amt_cents
             merged_txn.ch_txn.bal = ch_bal
-        if merged_txn.type_ in [TxnType.GOODBUDGET, TxnType.BOTH]:
+        if isinstance(merged_txn, (MergedTxn_GoodbudgetTxn, MergedTxn_BothTxns)):
             gb_bal += merged_txn.gb_txn.amt_cents
             merged_txn.gb_txn.bal = gb_bal
 
@@ -112,11 +114,11 @@ def get_txns_grouped(ch_txns: List[ChaseTxn], gb_txns: List[GoodbudgetTxn],
     # split merged_txns into 3 different lists
     only_ch_txns: List[ChaseTxn] = []
     only_gb_txns: List[GoodbudgetTxn] = []
-    both_txns: List[MergedTxn] = []
+    both_txns: List[MergedTxn_BothTxns] = []
     for txn in merged_txns_sorted:
-        if txn.type_ == TxnType.CHASE:
+        if isinstance(txn, MergedTxn_ChaseTxn):
             only_ch_txns.append(txn.ch_txn)
-        elif txn.type_ == TxnType.GOODBUDGET:
+        elif isinstance(txn, MergedTxn_GoodbudgetTxn):
             only_gb_txns.append(txn.gb_txn)
         else:
             both_txns.append(txn)
