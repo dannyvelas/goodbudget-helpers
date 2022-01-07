@@ -127,10 +127,8 @@ def get_txns_grouped(ch_txns: List[ChaseTxn], gb_txns: List[GoodbudgetTxn],
     # the id they were given when they were read
     # reverse=True because the smaller the ID, the newer the txn and
     # we want the older txns first
-    only_ch_txns_ssorted = sorted(
-        only_ch_txns, key=lambda x: x.id_, reverse=True)
-    only_gb_txns_ssorted = sorted(
-        only_gb_txns, key=lambda x: x.id_, reverse=True)
+    only_ch_txns_ssorted = sorted(only_ch_txns, key=lambda x: -x.id_)
+    only_gb_txns_ssorted = sorted(only_gb_txns, key=lambda x: -x.id_)
 
     return TxnsGrouped(
         only_ch_txns=only_ch_txns_ssorted,

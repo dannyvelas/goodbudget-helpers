@@ -47,10 +47,10 @@ gb_txns_result = read_gb_txns()
 ch_txns = ch_txns_result.txns
 gb_txns = gb_txns_result.txns
 
-if gen_out or add_txns:
-    txns_grouped = get_txns_grouped(
-        ch_txns, gb_txns, config.ch_start_bal, config.gb_start_bal, MAX_DAYS_APART)
+txns_grouped = get_txns_grouped(
+    ch_txns, gb_txns, config.ch_start_bal, config.gb_start_bal, MAX_DAYS_APART)
 
+if gen_out or add_txns:
     if gen_out:
         log = Logger()
         log.lines_failed(ch_txns_result.lines_failed)
