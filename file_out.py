@@ -14,22 +14,26 @@ from datatypes import (
 
 
 ### Helper Values and Functions #########################################
-
 _AMT_CH_FIELDS = 5
+_CH_FIELD_NAMES = 'Chase ID,Chase Date,Chase Title,Chase Txn Amount,Chase Balance'
 
 
-def _ch_txn_to_row(ch_txn: ChaseTxn):
+def _ch_txn_to_row(ch_txn: ChaseTxn) -> str:
     return f'{ch_txn.id_},{ch_txn.date},{ch_txn.title},{ch_txn.amt_dollars},{ch_txn.bal/100}'
 
 
 _AMT_GB_FIELDS = 6
+_GB_FIELD_NAMES = 'Goodbudget ID,Goodbudget Date,Goodbudget Title,Goodbudget Envelope,Goodbudget Txn Amount,Goodbudget Balance'
 
 
-def _gb_txn_to_row(gb_txn: GoodbudgetTxn):
+def _gb_txn_to_row(gb_txn: GoodbudgetTxn) -> str:
     return f'{gb_txn.id_},{gb_txn.date},{gb_txn.title},{gb_txn.envelope},{gb_txn.amt_dollars},{gb_txn.bal/100}'
 
 
-def _merged_txn_to_row(merged_txn: MergedTxn):
+_MERGED_TXN_FIELD_NAMES = f'Txn Type,{_CH_FIELD_NAMES},{_GB_FIELD_NAMES},Balance Difference'
+
+
+def _merged_txn_to_row(merged_txn: MergedTxn) -> str:
     txn_type = 'BOTH'
 
     if isinstance(merged_txn, MergedTxn_ChaseTxn):
@@ -86,21 +90,26 @@ class Logger:
 
     def txns_grouped(self, txns_grouped: TxnsGrouped) -> None:
         with open(self.ch_file, 'w') as out_file:
+            out_file.write(f'{_CH_FIELD_NAMES}\n')
             for txn in txns_grouped.only_ch_txns:
                 out_file.write(f"{_ch_txn_to_row(txn)}\n")
 
         with open(self.gb_file, 'w') as out_file:
+            out_file.write(f'{_GB_FIELD_NAMES}\n')
             for txn in txns_grouped.only_gb_txns:
                 out_file.write(f"{_gb_txn_to_row(txn)}\n")
 
         with open(self.both_file, 'w') as out_file:
+            out_file.write(f'{_MERGED_TXN_FIELD_NAMES}\n')
             for txn in txns_grouped.both_txns:
                 out_file.write(f"{_merged_txn_to_row(txn)}\n")
 
         with open(self.merged_file, 'w') as out_file:
+            out_file.write(f'{_MERGED_TXN_FIELD_NAMES}\n')
             for txn in txns_grouped.merged_txns:
                 out_file.write(f"{_merged_txn_to_row(txn)}\n")
 
         with open(self.bal_diff_freq_file, 'w') as out_file:
+            out_file.write('Balance,Frequency\n')
             for bal_and_freq in txns_grouped.bal_diff_freq:
                 out_file.write(f"{_bal_and_freq_to_row(bal_and_freq)}\n")
