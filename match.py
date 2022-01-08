@@ -14,6 +14,12 @@ from datatypes import (
 
 
 def _sort_merged_txns(merged_txns: List[MergedTxn]) -> List[MergedTxn]:
+    def get_gb_id(txn: MergedTxn) -> int:
+        if isinstance(txn, MergedTxn_ChaseTxn):
+            return 1
+        else:
+            return -txn.gb_txn.id_
+
     def compare(txn_1: MergedTxn, txn_2: MergedTxn):
         def get_ts(txn: MergedTxn):
             if isinstance(txn, MergedTxn_ChaseTxn):
@@ -23,7 +29,7 @@ def _sort_merged_txns(merged_txns: List[MergedTxn]) -> List[MergedTxn]:
 
         if not isinstance(txn_1, MergedTxn_ChaseTxn) and not isinstance(txn_2, MergedTxn_ChaseTxn):
             return -1 if txn_1.gb_txn.id_ > txn_2.gb_txn.id_ else 1
-        if isinstance(txn_1, MergedTxn_ChaseTxn) and isinstance(txn_2, MergedTxn_ChaseTxn):
+        elif not isinstance(txn_1, MergedTxn_GoodbudgetTxn) and not isinstance(txn_2, MergedTxn_GoodbudgetTxn):
             return -1 if txn_1.ch_txn.id_ > txn_2.ch_txn.id_ else 1
         else:
             txn_1_ts = get_ts(txn_1)
@@ -35,7 +41,8 @@ def _sort_merged_txns(merged_txns: List[MergedTxn]) -> List[MergedTxn]:
             else:
                 return 0
 
-    return sorted(merged_txns, key=cmp_to_key(compare))
+    sorted_by_gb_id = sorted(merged_txns, key=get_gb_id)
+    return sorted(sorted_by_gb_id, key=cmp_to_key(compare))
 
 
 def get_txns_grouped(ch_txns: List[ChaseTxn], gb_txns: List[GoodbudgetTxn],
