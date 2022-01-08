@@ -19,6 +19,13 @@ def _shorten(s: str) -> str:
     return s
 
 
+def _dollars_to_cents(dollars: str):
+    return int(dollars
+               .replace('"', '')
+               .replace(",", '')
+               .replace(".", ''))
+
+
 T = TypeVar('T', ChaseTxn, GoodbudgetTxn)
 
 
@@ -28,13 +35,16 @@ class ReadResults(Generic[T]):
         self.lines_failed = lines_failed
 
 
-def read_ch_txns() -> ReadResults[ChaseTxn]:
+def read_ch_txns(ch_start_bal: int) -> ReadResults[ChaseTxn]:
     txns: List[ChaseTxn] = []
     lines_failed: List[str] = []
     with open(IN_CH_FILE) as in_file:
+        curr_bal = ch_start_bal
         for i, line in enumerate(in_file):
             if (txn := CH_REGEX.match(line)):
                 txn = txn.groupdict()
+                amt_cents = _dollars_to_cents(txn['amt'])
+                curr_bal += amt_cents
                 txns.append(ChaseTxn(
                     id_=i,
                     ts=int(dt.strptime(txn['date'], "%m/%d/%Y").timestamp()),
@@ -42,7 +52,9 @@ def read_ch_txns() -> ReadResults[ChaseTxn]:
                     is_pending=txn['balance'] == ' ',
                     date=txn['date'],
                     title=_shorten(txn['title']),
-                    amt_dollars=txn['amt']
+                    amt_dollars=txn['amt'],
+                    amt_cents=amt_cents,
+                    bal=curr_bal
                 ))
             else:
                 lines_failed.append(line)
@@ -50,13 +62,16 @@ def read_ch_txns() -> ReadResults[ChaseTxn]:
     return ReadResults(txns, lines_failed)
 
 
-def read_gb_txns() -> ReadResults[GoodbudgetTxn]:
+def read_gb_txns(gb_start_bal: int) -> ReadResults[GoodbudgetTxn]:
     txns: List[GoodbudgetTxn] = []
     lines_failed: List[str] = []
     with open(IN_GB_FILE) as in_file:
+        curr_bal = gb_start_bal
         for i, line in enumerate(in_file):
             if (txn := GB_EXPENSE_REGEX.match(line)) or (txn := GB_INCOME_REGEX.match(line)):
                 txn = txn.groupdict()
+                amt_cents = _dollars_to_cents(txn['amt'])
+                curr_bal += amt_cents
                 txns.append(GoodbudgetTxn(
                     id_=i,
                     ts=int(dt.strptime(txn['date'], "%m/%d/%Y").timestamp()),
@@ -64,7 +79,9 @@ def read_gb_txns() -> ReadResults[GoodbudgetTxn]:
                     title=_shorten(txn['title']),
                     envelope=txn['envelope'],
                     amt_dollars=txn['amt'],
-                    notes=txn['notes']
+                    amt_cents=amt_cents,
+                    notes=txn['notes'],
+                    bal=curr_bal
                 ))
             else:
                 lines_failed.append(line)

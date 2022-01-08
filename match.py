@@ -3,14 +3,16 @@ from typing import Dict, List
 
 from datatypes import (
     BalanceDifferenceFrequency,
-    MergedTxn_BothTxns,
     ChaseTxn,
     GoodbudgetTxn,
     MergedTxn,
+    MergedTxn_BothTxns,
     MergedTxn_ChaseTxn,
     MergedTxn_GoodbudgetTxn,
     TxnsGrouped,
 )
+
+MAX_DAYS_APART = 7
 
 
 def _sort_merged_txns(merged_txns: List[MergedTxn]) -> List[MergedTxn]:
@@ -46,8 +48,7 @@ def _sort_merged_txns(merged_txns: List[MergedTxn]) -> List[MergedTxn]:
 
 
 def get_txns_grouped(ch_txns: List[ChaseTxn], gb_txns: List[GoodbudgetTxn],
-                     ch_start_bal: int, gb_start_bal: int,
-                     max_days_apart: int) -> TxnsGrouped:
+                     ch_start_bal: int, gb_start_bal: int) -> TxnsGrouped:
     # sort by amount, on a tie, give priority to the earlier txn
     ch_sorted = sorted(ch_txns, key=lambda x: (x.amt_cents, -x.id_))
     gb_sorted = sorted(gb_txns, key=lambda x: (x.amt_cents, -x.id_))
@@ -65,11 +66,11 @@ def get_txns_grouped(ch_txns: List[ChaseTxn], gb_txns: List[GoodbudgetTxn],
             gb_i += 1
         else:
             days_apart = (gb_txn.ts - ch_txn.ts) / (60 * 60 * 24)
-            if days_apart < (max_days_apart * -1):
+            if days_apart < (MAX_DAYS_APART * -1):
                 # if gb too far in past, add it by itself
                 merged_txns.append(MergedTxn_GoodbudgetTxn(gb_txn))
                 gb_i += 1
-            elif days_apart > max_days_apart:
+            elif days_apart > MAX_DAYS_APART:
                 # if ch too far in past, add it by itself
                 merged_txns.append(MergedTxn_ChaseTxn(ch_txn))
                 ch_i += 1
