@@ -140,7 +140,7 @@ def add_new_txns(txns_grouped: TxnsGrouped,
                  envelopes_dict: Dict[str, Union[str, None]],
                  gb_username: str,
                  gb_password: str,
-                 last_gb_txn_ts: int) -> List[GoodbudgetTxn]:
+                 last_gb_txn_ts: int):
     # cast MergedTxns which were matched into MatchedTxns. remove quotes from titles and envelopes
     matched_txns: List[MatchedTxn] = [MatchedTxn(
         x.ch_txn.title, x.gb_txn.title.replace('"', ''), x.gb_txn.envelope.replace('"', ''))
@@ -154,7 +154,6 @@ def add_new_txns(txns_grouped: TxnsGrouped,
     driver = Driver()
     driver.login(gb_username, gb_password)
 
-    gb_txns_added: List[GoodbudgetTxn] = []
     # add each txn
     for txn in txns_grouped.only_ch_txns:
         if txn.ts > last_gb_txn_ts and not txn.is_pending and should_add(txn):
@@ -191,8 +190,10 @@ def add_new_txns(txns_grouped: TxnsGrouped,
 
                     gb_notes = input('\tNote? (none): ')
 
+                    # bad practice to send in -1, even if i won't use these fields...
+                    # too lazy to make a new datatype
                     gb_txn = GoodbudgetTxn(-1, txn.ts, txn.date, gb_title, gb_envelope,
-                                           txn.amt_dollars, gb_notes)
+                                           txn.amt_dollars, -1, gb_notes, -1)
                     break
                 except EOFError:
                     # if user made a mistake, they press `Ctrl+D`, which will print a
@@ -205,6 +206,4 @@ def add_new_txns(txns_grouped: TxnsGrouped,
             else:
                 driver.add_income(gb_txn)
 
-            gb_txns_added.append(gb_txn)
-
-    return gb_txns_added
+    return
