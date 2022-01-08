@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import List, Union
 
 
@@ -31,20 +32,20 @@ class GoodbudgetTxn:
 
 class MergedTxn_ChaseTxn:
     def __init__(self, ch_txn: ChaseTxn):
-        self.ch_txn = ch_txn
+        self.ch_txn = deepcopy(ch_txn)
         self.bal_diff = 0
 
 
 class MergedTxn_GoodbudgetTxn:
     def __init__(self, gb_txn: GoodbudgetTxn):
-        self.gb_txn = gb_txn
+        self.gb_txn = deepcopy(gb_txn)
         self.bal_diff = 0
 
 
 class MergedTxn_BothTxns:
     def __init__(self, ch_txn: ChaseTxn, gb_txn: GoodbudgetTxn):
-        self.ch_txn = ch_txn
-        self.gb_txn = gb_txn
+        self.ch_txn = deepcopy(ch_txn)
+        self.gb_txn = deepcopy(gb_txn)
         self.bal_diff = 0
 
 
