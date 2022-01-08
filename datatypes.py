@@ -2,9 +2,16 @@ from copy import deepcopy
 from typing import List, Union
 
 
+def _dollars_to_cents(dollars: str):
+    return int(dollars
+               .replace('"', '')
+               .replace(",", '')
+               .replace(".", ''))
+
+
 class ChaseTxn:
     def __init__(self, id_: int, ts: int, is_debit: bool, is_pending: bool, date: str,
-                 title: str, amt_dollars: str, amt_cents: int, bal: int):
+                 title: str, amt_dollars: str):
         self.id_ = id_
         self.ts = ts
         self.is_debit = is_debit
@@ -12,22 +19,22 @@ class ChaseTxn:
         self.date = date
         self.title = title
         self.amt_dollars = amt_dollars
-        self.amt_cents = amt_cents
-        self.bal = bal
+        self.amt_cents = _dollars_to_cents(amt_dollars)
+        self.bal = 0
 
 
 class GoodbudgetTxn:
     def __init__(self, id_: int, ts: int, date: str, title: str, envelope: str,
-                 amt_dollars: str, amt_cents: int, notes: str, bal: int):
+                 amt_dollars: str, notes: str):
         self.id_ = id_
         self.ts = ts
         self.date = date
         self.title = title
         self.envelope = envelope
         self.amt_dollars = amt_dollars
-        self.amt_cents = amt_cents
+        self.amt_cents = _dollars_to_cents(amt_dollars)
         self.notes = notes
-        self.bal = bal
+        self.bal = 0
 
 
 class MergedTxn_ChaseTxn:
