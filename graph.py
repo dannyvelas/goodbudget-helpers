@@ -1,11 +1,13 @@
 from datetime import datetime as dt
 from enum import Enum
-from operator import attrgetter
 from typing import List, Union
 
+from dotenv import dotenv_values
 from matplotlib import pyplot
 
+from config import Config
 from datatypes import GoodbudgetTxn
+from file_in import read_gb_txns
 
 
 class Selection(Enum):
@@ -44,11 +46,31 @@ def get_selection() -> Union[ErrInput, OkInput]:
 
 
 def graph(selection: Selection, txns: List[GoodbudgetTxn]):
-    txns_sorted = sorted(txns, key=attrgetter('ts'))
-
     if selection == Selection.BALANCE:
-        dates = [dt.fromtimestamp(x.ts) for x in txns_sorted]
-        balances = [x.bal/100 for x in txns_sorted]
+        dates = [dt.fromtimestamp(x.ts) for x in txns]
+        balances = [x.bal/100 for x in txns]
 
         pyplot.plot_date(dates, balances, color='green', linestyle='solid')
         pyplot.show()
+
+
+if __name__ == "__main__":
+    # load config
+    ENV = dotenv_values(".env")
+    if not ENV:
+        print("Error, no .env file found.")
+        exit(1)
+    config = Config(ENV)
+
+    gb_txns = read_gb_txns(config.gb_start_bal).txns
+
+    try:
+        selection_result = get_selection()
+        if isinstance(selection_result, ErrInput):
+            print('Error,', selection_result.err)
+        else:
+            graph(selection_result.selection, gb_txns)
+
+    except EOFError:
+        print('Exiting.\n')
+        exit(1)
