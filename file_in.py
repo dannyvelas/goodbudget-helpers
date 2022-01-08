@@ -67,7 +67,8 @@ def read_gb_txns(gb_start_bal: int) -> ReadResults[GoodbudgetTxn]:
                     ts=int(dt.strptime(txn['date'], "%m/%d/%Y").timestamp()),
                     date=txn['date'],
                     title=_shorten(txn['title']),
-                    envelope=txn['envelope'],
+                    envelope=(txn['envelope'] if txn['envelope']
+                              != '' else 'Income'),
                     amt_dollars=txn['amt'],
                     notes=txn['notes']
                 ))

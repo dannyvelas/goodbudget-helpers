@@ -1,6 +1,6 @@
 from datetime import datetime as dt
 from enum import Enum
-from typing import List, Union
+from typing import Dict, List, Union
 
 from dotenv import dotenv_values
 from matplotlib import pyplot
@@ -12,6 +12,7 @@ from file_in import read_gb_txns
 
 class Selection(Enum):
     BALANCE = 1
+    MAX_TXNS = 2
 
 
 class ErrInput:
@@ -28,6 +29,7 @@ def get_selection() -> Union[ErrInput, OkInput]:
     selection = input(
         """Select an option to graph:
     (1) Balance as a function of time
+    (2) Max amount of transactions from a single title as a function of envelopes
     """
     )
 
@@ -39,8 +41,8 @@ def get_selection() -> Union[ErrInput, OkInput]:
     selection_int = int(selection)
     if selection_int < 1:
         return ErrInput("Selection must be greater than or equal to 1.")
-    elif selection_int > 1:
-        return ErrInput("Selection must be less than or equal to 1.")
+    elif selection_int > 2:
+        return ErrInput("Selection must be less than or equal to 2.")
     else:
         return OkInput(Selection(selection_int))
 
@@ -51,6 +53,39 @@ def graph(selection: Selection, txns: List[GoodbudgetTxn]):
         balances = [x.bal/100 for x in txns]
 
         pyplot.plot_date(dates, balances, color='green', linestyle='solid')
+        pyplot.show()
+    elif selection == Selection.MAX_TXNS:
+        env_to_title_to_amt_txns: Dict[str, Dict[str, int]] = {}
+        for txn in txns:
+            envelope = txn.envelope
+            title = txn.title
+            if envelope not in env_to_title_to_amt_txns:
+                env_to_title_to_amt_txns[envelope] = {title: 1}
+            elif title not in env_to_title_to_amt_txns[envelope]:
+                env_to_title_to_amt_txns[envelope][title] = 1
+            else:
+                env_to_title_to_amt_txns[envelope][title] += 1
+
+        envelopes: List[str] = []
+        most_txns_list: List[int] = []
+        titles_with_most_txns: List[str] = []
+        for envelope in env_to_title_to_amt_txns:
+            most_txns = 0
+            title_with_most_txns = ''
+            for title in env_to_title_to_amt_txns[envelope]:
+                curr_txns = env_to_title_to_amt_txns[envelope][title]
+                if curr_txns > most_txns:
+                    most_txns = curr_txns
+                    title_with_most_txns = title
+            envelopes.append(envelope)
+            most_txns_list.append(most_txns)
+            titles_with_most_txns.append(title_with_most_txns)
+
+        _, ax = pyplot.subplots()
+        ax.bar(envelopes, most_txns_list)
+        for i, title in enumerate(titles_with_most_txns):
+            ax.text(i - 0.25, most_txns_list[i] + 3, title,
+                    color='blue', size='small', rotation=45)
         pyplot.show()
 
 
