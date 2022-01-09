@@ -13,6 +13,7 @@ from file_in import read_gb_txns
 class Selection(Enum):
     BALANCE = 1
     MAX_TXNS = 2
+    AMT_TXNS = 3
 
 
 class ErrInput:
@@ -29,7 +30,8 @@ def get_selection() -> Union[ErrInput, OkInput]:
     selection = input(
         """Select an option to graph:
     (1) Balance as a function of time
-    (2) Max amount of transactions from a single title as a function of envelopes
+    (2) Most popular transaction title per envelope
+    (3) Amount of transactions per title
     """
     )
 
@@ -41,8 +43,8 @@ def get_selection() -> Union[ErrInput, OkInput]:
     selection_int = int(selection)
     if selection_int < 1:
         return ErrInput("Selection must be greater than or equal to 1.")
-    elif selection_int > 2:
-        return ErrInput("Selection must be less than or equal to 2.")
+    elif selection_int > 3:
+        return ErrInput("Selection must be less than or equal to 3.")
     else:
         return OkInput(Selection(selection_int))
 
@@ -86,6 +88,22 @@ def graph(selection: Selection, txns: List[GoodbudgetTxn]):
         for i, title in enumerate(titles_with_most_txns):
             ax.text(i - 0.25, most_txns_list[i] + 3, title,
                     color='blue', size='small', rotation=45)
+        pyplot.show()
+    elif selection == Selection.AMT_TXNS:
+        title_to_amt_txns: Dict[str, int] = {}
+        for txn in txns:
+            if txn.envelope == '"Eating out"':
+                title = txn.title
+                if title not in title_to_amt_txns:
+                    title_to_amt_txns[title] = 1
+                else:
+                    title_to_amt_txns[title] += 1
+
+        _, ax = pyplot.subplots()
+        ax.bar(list(title_to_amt_txns.keys()),
+               list(title_to_amt_txns.values()))
+        pyplot.setp(ax.get_xticklabels(), rotation=45, ha="right",
+                    rotation_mode="anchor", size='small')
         pyplot.show()
 
 
