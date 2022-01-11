@@ -190,10 +190,8 @@ def add_new_txns(txns_grouped: TxnsGrouped,
 
                     gb_notes = input('\tNote? (none): ')
 
-                    # bad practice to send in -1, even if i won't use these fields...
-                    # too lazy to make a new datatype
                     gb_txn = GoodbudgetTxn(-1, txn.ts, txn.date, gb_title, gb_envelope,
-                                           txn.amt_dollars, -1, gb_notes, -1)
+                                           txn.amt_dollars, gb_notes)
                     break
                 except EOFError:
                     # if user made a mistake, they press `Ctrl+D`, which will print a
