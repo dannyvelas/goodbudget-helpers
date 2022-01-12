@@ -109,26 +109,21 @@ def graph(selection: Selection, txns: List[GoodbudgetTxn]):
                     rotation_mode="anchor", size='small')
         pyplot.show()
     elif selection == Selection.BALANCE_ENV:
-        month_to_spent: Dict[int, int] = {}
+        month_to_spent: Dict[dt, int] = {}
         for txn in txns:
             if txn.envelope == 'Groceries':
                 date_obj = dt.fromtimestamp(txn.ts)
-                net_month = date_obj.month + (date_obj.year * 12)
-                if net_month not in month_to_spent:
-                    month_to_spent[net_month] = 0
+                first_of_month = dt(year=date_obj.year,
+                                    month=date_obj.month, day=1)
+                if first_of_month not in month_to_spent:
+                    month_to_spent[first_of_month] = 0
                 else:
-                    month_to_spent[net_month] += txn.amt_cents
-
-        # TODO: theres probably a better way to do this
-        # by using dt objects as a dict key.
-        month_strs = [
-            f'{((net_month-1) % 12) + 1}-{(net_month-1) // 12}' for net_month in month_to_spent]
-        month_dts = [dt.strptime(x, '%m-%Y') for x in month_strs]
+                    month_to_spent[first_of_month] += txn.amt_cents
 
         dollars = [(x/100) * -1 for x in month_to_spent.values()]
 
         _, ax = pyplot.subplots()
-        ax.bar(month_dts, dollars)
+        ax.bar(month_to_spent.keys(), dollars)
         ax.xaxis_date()
 
         pyplot.setp(ax.get_xticklabels(), rotation=45, ha="right",
