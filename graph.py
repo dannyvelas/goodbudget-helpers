@@ -14,6 +14,7 @@ class Selection(Enum):
     BALANCE = 1
     MAX_TXNS = 2
     AMT_TXNS = 3
+    BALANCE_ENV = 4
 
 
 class ErrInput:
@@ -31,7 +32,8 @@ def get_selection() -> Union[ErrInput, OkInput]:
         """Select an option to graph:
     (1) Balance as a function of time
     (2) Most popular transaction title per envelope
-    (3) Amount of transactions per title
+    (3) Amount of transactions per title in a given envelope
+    (4) Amount of dollars spent as a function of months, in a given envelope
     """
     )
 
@@ -43,8 +45,8 @@ def get_selection() -> Union[ErrInput, OkInput]:
     selection_int = int(selection)
     if selection_int < 1:
         return ErrInput("Selection must be greater than or equal to 1.")
-    elif selection_int > 3:
-        return ErrInput("Selection must be less than or equal to 3.")
+    elif selection_int > 4:
+        return ErrInput("Selection must be less than or equal to 4.")
     else:
         return OkInput(Selection(selection_int))
 
@@ -92,7 +94,8 @@ def graph(selection: Selection, txns: List[GoodbudgetTxn]):
     elif selection == Selection.AMT_TXNS:
         title_to_amt_txns: Dict[str, int] = {}
         for txn in txns:
-            if txn.envelope == '"Eating out"':
+            # TODO: make programmable
+            if txn.envelope == 'Housing':
                 title = txn.title
                 if title not in title_to_amt_txns:
                     title_to_amt_txns[title] = 1
@@ -104,6 +107,33 @@ def graph(selection: Selection, txns: List[GoodbudgetTxn]):
                list(title_to_amt_txns.values()))
         pyplot.setp(ax.get_xticklabels(), rotation=45, ha="right",
                     rotation_mode="anchor", size='small')
+        pyplot.show()
+    elif selection == Selection.BALANCE_ENV:
+        month_to_spent: Dict[int, int] = {}
+        for txn in txns:
+            if txn.envelope == 'Groceries':
+                date_obj = dt.fromtimestamp(txn.ts)
+                net_month = date_obj.month + (date_obj.year * 12)
+                if net_month not in month_to_spent:
+                    month_to_spent[net_month] = 0
+                else:
+                    month_to_spent[net_month] += txn.amt_cents
+
+        # TODO: theres probably a better way to do this
+        # by using dt objects as a dict key.
+        month_strs = [
+            f'{((net_month-1) % 12) + 1}-{(net_month-1) // 12}' for net_month in month_to_spent]
+        month_dts = [dt.strptime(x, '%m-%Y') for x in month_strs]
+
+        dollars = [(x/100) * -1 for x in month_to_spent.values()]
+
+        _, ax = pyplot.subplots()
+        ax.bar(month_dts, dollars)
+        ax.xaxis_date()
+
+        pyplot.setp(ax.get_xticklabels(), rotation=45, ha="right",
+                    rotation_mode="anchor", size='small')
+
         pyplot.show()
 
 
