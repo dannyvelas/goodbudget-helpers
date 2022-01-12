@@ -116,7 +116,7 @@ def graph(selection: Selection, txns: List[GoodbudgetTxn]):
                 first_of_month = dt(year=date_obj.year,
                                     month=date_obj.month, day=1)
                 if first_of_month not in month_to_spent:
-                    month_to_spent[first_of_month] = 0
+                    month_to_spent[first_of_month] = txn.amt_cents
                 else:
                     month_to_spent[first_of_month] += txn.amt_cents
 
