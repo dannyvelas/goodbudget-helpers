@@ -3,8 +3,8 @@
 ## Function
 * This repository has three main modules:
   1. Transaction Organizing module:
-    * This module reads a csv file of Chase transactions, a csv file of Goodbudget transactions, and prints out
-      a few different files, where each file is a list of:
+    * This module reads a csv file of Chase transactions, a csv file of Goodbudget transactions, and prints out these lists
+      in the form of files:
       * the transactions that both files have in common: `both.csv`
       * the transactions that the Chase file has, but the Goodbudget does not: `goodbudget.csv`
       * the transactions that the Goodbudget file has, but the Chase does not: `chase.csv`
@@ -40,7 +40,7 @@
   * Requiring a Chase account and making the user download files manually into a folder is not ideal.
   * With Plaid I may be able to process a user's past transactions, regardless of their bank, without making them download
     their transaction history.
-  * Plaid is also nice in that I can continue not needing access to a user's personal bank account data.
+  * Plaid is also nice in that the developer can continue not needing access to the users' personal bank account data.
 * Using Spark:
   * All three modules run on a single thread.
   * I could probably use spark to parallelize reading the transactions and the matching and sorting algorithms behind the
@@ -50,5 +50,5 @@
     wouldn't be able to hold all the data in RAM and it would crash.
   * To fix this I might have to split each file into chunks, process each chunk, and then aggregate in the output.
 * Using a web server or a GUI to offer a better graphical interface:
-  * It would be much more user friendly and fancy if this repo were an API endpoint so that all the data handling logic happened
-    on the backend and the graphing logic on the front-end.
+  * It would be much nicer if this repo was an API endpoint or a downloadable app so that all the data handling logic could
+    happen on some backend and the graphing logic on a user-friendly, interactive front-end.

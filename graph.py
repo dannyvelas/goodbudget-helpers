@@ -1,4 +1,4 @@
-from datetime import datetime as dt
+from datetime import datetime as dt, timedelta
 from enum import Enum
 from typing import Dict, List, Union
 
@@ -31,7 +31,7 @@ def get_selection() -> Union[ErrInput, OkInput]:
     selection = input(
         """Select an option to graph:
     (1) Balance as a function of time
-    (2) Most popular transaction title per envelope
+    (2) Amount of transactios from most popular title per envelope
     (3) Amount of transactions per title in a given envelope
     (4) Amount of dollars spent as a function of months, in a given envelope
     """
@@ -109,23 +109,54 @@ def graph(selection: Selection, txns: List[GoodbudgetTxn]):
                     rotation_mode="anchor", size='small')
         pyplot.show()
     elif selection == Selection.BALANCE_ENV:
-        month_to_spent: Dict[dt, int] = {}
+        env_month_spent: Dict[str, Dict[dt, int]] = {}
+        all_months: List[dt] = []
         for txn in txns:
-            if txn.envelope == 'Groceries':
+            if txn.envelope in ['"Eating out"', "Groceries"]:
                 date_obj = dt.fromtimestamp(txn.ts)
                 first_of_month = dt(year=date_obj.year,
                                     month=date_obj.month, day=1)
-                if first_of_month not in month_to_spent:
-                    month_to_spent[first_of_month] = txn.amt_cents
+                if txn.envelope not in env_month_spent:
+                    env_month_spent[txn.envelope] = {
+                        first_of_month: txn.amt_cents}
+                elif first_of_month not in env_month_spent[txn.envelope]:
+                    env_month_spent[txn.envelope][first_of_month] = txn.amt_cents
                 else:
-                    month_to_spent[first_of_month] += txn.amt_cents
+                    env_month_spent[txn.envelope][first_of_month] += txn.amt_cents
 
-        dollars = [(x/100) * -1 for x in month_to_spent.values()]
+                # TODO: it would be better to have a fixed date range between the very first txn month and the last one
+                # ref: https://stackoverflow.com/questions/34898525/generate-list-of-months-between-interval-in-python/34899127#
+                if not all_months or all_months[-1] != first_of_month:
+                    all_months.append(first_of_month)
+
+        all_months = sorted(all_months)
+        print(all_months)
 
         _, ax = pyplot.subplots()
-        ax.bar(month_to_spent.keys(), dollars)
-        ax.xaxis_date()
+        width = 5
 
+        dollars_eo: List[float] = []
+        for month in all_months:
+            if month not in env_month_spent['"Eating out"']:
+                dollars_eo.append(0)
+            else:
+                dollars_eo.append(
+                    (env_month_spent['"Eating out"'][month] / 100) * -1)
+        ax.bar([x - timedelta(days=5)
+               for x in all_months], dollars_eo, width, color="b", label='"Eating out"')
+
+        dollars_gr: List[float] = []
+        for month in all_months:
+            if month not in env_month_spent['Groceries']:
+                dollars_gr.append(0)
+            else:
+                dollars_gr.append(
+                    (env_month_spent['Groceries'][month] / 100) * -1)
+        ax.bar(all_months, dollars_gr, width, color="g",  # bottom=dollars_eo,
+               label='Groceries')
+
+        ax.xaxis_date()
+        ax.legend()
         pyplot.setp(ax.get_xticklabels(), rotation=45, ha="right",
                     rotation_mode="anchor", size='small')
 
