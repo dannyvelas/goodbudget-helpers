@@ -8,6 +8,7 @@ python-dotenv = "*"
 selenium = "*"
 autopep8 = "*"
 matplotlib = "*"
+pandas = "*"
 
 [dev-packages]
 

@@ -1,5 +1,4 @@
 from datetime import datetime as dt, timedelta
-from enum import Enum
 from typing import Dict, List, Union
 
 from dotenv import dotenv_values
@@ -8,57 +7,120 @@ from matplotlib import pyplot
 from config import Config
 from datatypes import GoodbudgetTxn
 from file_in import read_gb_txns
+from pandas import Timestamp
+import pandas
 
 
-class Selection(Enum):
-    BALANCE = 1
-    MAX_TXNS = 2
-    AMT_TXNS = 3
-    BALANCE_ENV = 4
+# for graphs
+COLORS = ['b', 'g', 'r', 'c', 'm', 'y',
+          'magenta', 'tomato', 'slategray', 'peru', 'crimson']
 
 
-class ErrInput:
+class Balance:
+    pass
+
+
+class AmtFromMostPopular:
+    pass
+
+
+class AmtTxnsPerTitle:
+    def __init__(self, envelope: str):
+        self.envelope = envelope
+
+
+class MonthlySpendingEnv:
+    def __init__(self, envelope: str):
+        self.envelope = envelope
+
+
+class MonthlySpendingTitle:
+    def __init__(self, title: str):
+        self.title = title
+
+
+Selection = Union[
+    Balance,
+    AmtFromMostPopular,
+    AmtTxnsPerTitle,
+    MonthlySpendingEnv,
+    MonthlySpendingTitle
+]
+
+
+class Err:
     def __init__(self, err: str):
         self.err = err
 
 
-class OkInput:
-    def __init__(self, selection: Selection):
-        self.selection = selection
+def safe_int(selection: str) -> Union[Err, int]:
+    if not selection.isdecimal():
+        return Err("Selection must be a digit.")
+    return int(selection)
 
 
-def get_selection() -> Union[ErrInput, OkInput]:
+def get_envelope(envelopes: List[str]) -> Union[Err, str]:
+    for i, envelope in enumerate(envelopes):
+        print(f'({i}) {envelope}')
+
+    envelope_chosen = input(
+        'Choose the envelope you would like by entering its number: ')
+    envelope_result = safe_int(envelope_chosen)
+    if isinstance(envelope_result, Err):
+        return envelope_result
+
+    if envelope_result < 0 or envelope_result > len(envelopes):
+        return Err("Envelope chosen out of range.")
+
+    return envelopes[envelope_result]
+
+
+def get_selection(envelopes: List[str]) -> Union[Err, Selection]:
     selection = input(
         """Select an option to graph:
     (1) Balance as a function of time
-    (2) Amount of transactios from most popular title per envelope
+    (2) Amount of transactions from most popular title per envelope
     (3) Amount of transactions per title in a given envelope
-    (4) Amount of dollars spent as a function of months, in a given envelope
+    (4) Amount of dollars spent as a function of months, for a given envelope
+    (5) Amount of dollars spent as a function of months, for a given title
     """
     )
 
-    if len(selection) > 1:
-        return ErrInput("Selection must be one character.")
-    elif not selection.isdecimal():
-        return ErrInput("Selection must be a digit.")
+    selection_result = safe_int(selection)
+    if isinstance(selection_result, Err):
+        return selection_result
 
-    selection_int = int(selection)
-    if selection_int < 1:
-        return ErrInput("Selection must be greater than or equal to 1.")
-    elif selection_int > 4:
-        return ErrInput("Selection must be less than or equal to 4.")
+    if selection_result < 1:
+        return Err("Selection must be greater than or equal to 1.")
+    elif selection_result > 5:
+        return Err("Selection must be less than or equal to 4.")
+    elif selection_result == 1:
+        return Balance()
+    elif selection_result == 2:
+        return AmtFromMostPopular()
+    elif selection_result == 3:
+        envelope_result = get_envelope(envelopes)
+        if isinstance(envelope_result, Err):
+            return envelope_result
+        return AmtTxnsPerTitle(envelope_result)
+    elif selection_result == 4:
+        envelope_result = get_envelope(envelopes)
+        if isinstance(envelope_result, Err):
+            return envelope_result
+        return MonthlySpendingEnv(envelope_result)
     else:
-        return OkInput(Selection(selection_int))
+        title = input('title: ')
+        return MonthlySpendingTitle(title)
 
 
-def graph(selection: Selection, txns: List[GoodbudgetTxn]):
-    if selection == Selection.BALANCE:
+def graph(selection: Selection, txns: List[GoodbudgetTxn], date_range: List[Timestamp]):
+    if isinstance(selection, Balance):
         dates = [dt.fromtimestamp(x.ts) for x in txns]
         balances = [x.bal/100 for x in txns]
 
         pyplot.plot_date(dates, balances, color='green', linestyle='solid')
         pyplot.show()
-    elif selection == Selection.MAX_TXNS:
+    elif isinstance(selection, AmtFromMostPopular):
         env_to_title_to_amt_txns: Dict[str, Dict[str, int]] = {}
         for txn in txns:
             envelope = txn.envelope
@@ -91,11 +153,10 @@ def graph(selection: Selection, txns: List[GoodbudgetTxn]):
             ax.text(i - 0.25, most_txns_list[i] + 3, title,
                     color='blue', size='small', rotation=45)
         pyplot.show()
-    elif selection == Selection.AMT_TXNS:
+    elif isinstance(selection, AmtTxnsPerTitle):
         title_to_amt_txns: Dict[str, int] = {}
         for txn in txns:
-            # TODO: make programmable
-            if txn.envelope == 'Housing':
+            if txn.envelope == selection.envelope:
                 title = txn.title
                 if title not in title_to_amt_txns:
                     title_to_amt_txns[title] = 1
@@ -108,14 +169,13 @@ def graph(selection: Selection, txns: List[GoodbudgetTxn]):
         pyplot.setp(ax.get_xticklabels(), rotation=45, ha="right",
                     rotation_mode="anchor", size='small')
         pyplot.show()
-    elif selection == Selection.BALANCE_ENV:
+    elif isinstance(selection, MonthlySpendingEnv):
         env_month_spent: Dict[str, Dict[dt, int]] = {}
-        all_months: List[dt] = []
         for txn in txns:
-            if txn.envelope in ['"Eating out"', "Groceries"]:
+            # TODO: allow more than one envelope to be passed in
+            if txn.envelope == selection.envelope:
                 date_obj = dt.fromtimestamp(txn.ts)
-                first_of_month = dt(year=date_obj.year,
-                                    month=date_obj.month, day=1)
+                first_of_month = date_obj.replace(day=1)
                 if txn.envelope not in env_month_spent:
                     env_month_spent[txn.envelope] = {
                         first_of_month: txn.amt_cents}
@@ -124,36 +184,47 @@ def graph(selection: Selection, txns: List[GoodbudgetTxn]):
                 else:
                     env_month_spent[txn.envelope][first_of_month] += txn.amt_cents
 
-                # TODO: it would be better to have a fixed date range between the very first txn month and the last one
-                # ref: https://stackoverflow.com/questions/34898525/generate-list-of-months-between-interval-in-python/34899127#
-                if not all_months or all_months[-1] != first_of_month:
-                    all_months.append(first_of_month)
+        _, ax = pyplot.subplots()
+        width = 5
 
-        all_months = sorted(all_months)
-        print(all_months)
+        for i, envelope in enumerate(env_month_spent):
+            dollars: List[float] = []
+            for month in date_range:
+                if month not in env_month_spent[envelope]:
+                    dollars.append(0)
+                else:
+                    dollars.append(
+                        (env_month_spent[envelope][month] / 100) * -1)
+            ax.bar([x - timedelta(days=i * 5) for x in date_range],
+                   dollars, width, color=COLORS[i], label=envelope)
+
+        ax.xaxis_date()
+        ax.legend()
+        pyplot.setp(ax.get_xticklabels(), rotation=45, ha="right",
+                    rotation_mode="anchor", size='small')
+
+        pyplot.show()
+    elif isinstance(selection, MonthlySpendingTitle):
+        month_spent: Dict[dt, int] = {}
+        for txn in txns:
+            if txn.title == selection.title:
+                date_obj = dt.fromtimestamp(txn.ts)
+                first_of_month = date_obj.replace(day=1)
+                if first_of_month not in month_spent:
+                    month_spent[first_of_month] = txn.amt_cents
+                else:
+                    month_spent[first_of_month] += txn.amt_cents
 
         _, ax = pyplot.subplots()
         width = 5
 
-        dollars_eo: List[float] = []
-        for month in all_months:
-            if month not in env_month_spent['"Eating out"']:
-                dollars_eo.append(0)
+        dollars: List[float] = []
+        for month in date_range:
+            if month not in month_spent:
+                dollars.append(0)
             else:
-                dollars_eo.append(
-                    (env_month_spent['"Eating out"'][month] / 100) * -1)
-        ax.bar([x - timedelta(days=5)
-               for x in all_months], dollars_eo, width, color="b", label='"Eating out"')
-
-        dollars_gr: List[float] = []
-        for month in all_months:
-            if month not in env_month_spent['Groceries']:
-                dollars_gr.append(0)
-            else:
-                dollars_gr.append(
-                    (env_month_spent['Groceries'][month] / 100) * -1)
-        ax.bar(all_months, dollars_gr, width, color="g",  # bottom=dollars_eo,
-               label='Groceries')
+                dollars.append((month_spent[month] / 100) * -1)
+        ax.bar(date_range, dollars, width, color='b', label=selection.title)
 
         ax.xaxis_date()
         ax.legend()
@@ -171,14 +242,32 @@ if __name__ == "__main__":
         exit(1)
     config = Config(ENV)
 
+    # get txns
     gb_txns = read_gb_txns(config.gb_start_bal).txns
 
+    # get envelopes, earliest, and latest date
+    seen = set()
+    envelopes: List[str] = []
+    earliest_date = dt.fromtimestamp(0)
+    latest_date = dt.fromtimestamp(0)
+    for txn in gb_txns:
+        if "Unallocated" not in txn.envelope and txn.envelope not in seen:
+            seen.add(txn.envelope)
+            envelopes.append(txn.envelope)
+        curr_date = dt.fromtimestamp(txn.ts)
+        if earliest_date.timestamp() == 0 or curr_date < earliest_date:
+            earliest_date = curr_date.replace(day=1)
+        if curr_date > latest_date:
+            latest_date = curr_date
+    date_range = pandas.date_range(
+        earliest_date, latest_date, freq='MS').to_list()
+
     try:
-        selection_result = get_selection()
-        if isinstance(selection_result, ErrInput):
+        selection_result = get_selection(envelopes)
+        if isinstance(selection_result, Err):
             print('Error,', selection_result.err)
         else:
-            graph(selection_result.selection, gb_txns)
+            graph(selection_result, gb_txns, date_range)
 
     except EOFError:
         print('Exiting.\n')
