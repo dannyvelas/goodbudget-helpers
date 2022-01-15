@@ -11,7 +11,7 @@ from pandas import Timestamp
 import pandas
 
 
-# for graphs
+# for graphs with more than one line / bar
 COLORS = ['b', 'g', 'r', 'c', 'm', 'y',
           'magenta', 'tomato', 'slategray', 'peru', 'crimson']
 
@@ -25,6 +25,11 @@ class AmtFromMostPopular:
 
 
 class AmtTxnsPerTitle:
+    def __init__(self, envelope: str):
+        self.envelope = envelope
+
+
+class AmtSpentPerTitle:
     def __init__(self, envelope: str):
         self.envelope = envelope
 
@@ -43,8 +48,9 @@ Selection = Union[
     Balance,
     AmtFromMostPopular,
     AmtTxnsPerTitle,
+    AmtSpentPerTitle,
     MonthlySpendingEnv,
-    MonthlySpendingTitle
+    MonthlySpendingTitle,
 ]
 
 
@@ -80,9 +86,10 @@ def get_selection(envelopes: List[str]) -> Union[Err, Selection]:
         """Select an option to graph:
     (1) Balance as a function of time
     (2) Amount of transactions from most popular title per envelope
-    (3) Amount of transactions per title in a given envelope
-    (4) Amount of dollars spent as a function of months, for a given envelope
-    (5) Amount of dollars spent as a function of months, for a given title
+    (3) Amount of transactions per title, in a given envelope
+    (4) Amount spent per title, in a given envelope
+    (5) Amount spent per month, in a given envelope
+    (6) Amount spent per month, for a given title
     """
     )
 
@@ -92,7 +99,7 @@ def get_selection(envelopes: List[str]) -> Union[Err, Selection]:
 
     if selection_result < 1:
         return Err("Selection must be greater than or equal to 1.")
-    elif selection_result > 5:
+    elif selection_result > 6:
         return Err("Selection must be less than or equal to 4.")
     elif selection_result == 1:
         return Balance()
@@ -107,6 +114,11 @@ def get_selection(envelopes: List[str]) -> Union[Err, Selection]:
         envelope_result = get_envelope(envelopes)
         if isinstance(envelope_result, Err):
             return envelope_result
+        return AmtSpentPerTitle(envelope_result)
+    elif selection_result == 5:
+        envelope_result = get_envelope(envelopes)
+        if isinstance(envelope_result, Err):
+            return envelope_result
         return MonthlySpendingEnv(envelope_result)
     else:
         title = input('title: ')
@@ -118,7 +130,7 @@ def graph(selection: Selection, txns: List[GoodbudgetTxn], date_range: List[Time
         dates = [dt.fromtimestamp(x.ts) for x in txns]
         balances = [x.bal/100 for x in txns]
 
-        pyplot.plot_date(dates, balances, color='green', linestyle='solid')
+        pyplot.plot_date(dates, balances, color='b', linestyle='solid')
         pyplot.show()
     elif isinstance(selection, AmtFromMostPopular):
         env_to_title_to_amt_txns: Dict[str, Dict[str, int]] = {}
@@ -168,6 +180,26 @@ def graph(selection: Selection, txns: List[GoodbudgetTxn], date_range: List[Time
                list(title_to_amt_txns.values()))
         pyplot.setp(ax.get_xticklabels(), rotation=45, ha="right",
                     rotation_mode="anchor", size='small')
+        pyplot.show()
+    elif isinstance(selection, AmtSpentPerTitle):
+        title_spent: Dict[str, int] = {}
+        for txn in txns:
+            if txn.envelope == selection.envelope:
+                if txn.title not in title_spent:
+                    title_spent[txn.title] = txn.amt_cents
+                else:
+                    title_spent[txn.title] += txn.amt_cents
+
+        _, ax = pyplot.subplots()
+
+        dollars = [(x / 100) * -1 for x in title_spent.values()]
+        ax.bar(title_spent.keys(), dollars,
+               color='b', label=selection.envelope)
+
+        ax.legend()
+        pyplot.setp(ax.get_xticklabels(), rotation=45, ha="right",
+                    rotation_mode="anchor", size='small')
+
         pyplot.show()
     elif isinstance(selection, MonthlySpendingEnv):
         env_month_spent: Dict[str, Dict[dt, int]] = {}
