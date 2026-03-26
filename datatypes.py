@@ -5,6 +5,7 @@ from typing import List, Union
 def _dollars_to_cents(dollars: str):
     return int(dollars
                .replace('"', '')
+               .replace('$', '')
                .replace(",", '')
                .replace(".", ''))
 
@@ -20,6 +21,20 @@ class ChaseTxn:
         self.title = title
         self.amt_dollars = amt_dollars
         self.amt_cents = _dollars_to_cents(amt_dollars)
+        self.bal = 0
+
+
+class YnabTxn:
+    def __init__(self, id_: int, ts: int, date: str, title: str, category: str,
+                 amt_dollars: str, cleared: str):
+        self.id_ = id_
+        self.ts = ts
+        self.date = date
+        self.title = title
+        self.category = category
+        self.amt_dollars = amt_dollars
+        self.amt_cents = _dollars_to_cents(amt_dollars)
+        self.cleared = cleared
         self.bal = 0
 
 
@@ -43,6 +58,12 @@ class MergedTxn_ChaseTxn:
         self.bal_diff = 0
 
 
+class MergedTxn_YnabTxn:
+    def __init__(self, ynab_txn: YnabTxn):
+        self.ynab_txn = deepcopy(ynab_txn)
+        self.bal_diff = 0
+
+
 class MergedTxn_GoodbudgetTxn:
     def __init__(self, gb_txn: GoodbudgetTxn):
         self.gb_txn = deepcopy(gb_txn)
@@ -56,8 +77,7 @@ class MergedTxn_BothTxns:
         self.bal_diff = 0
 
 
-MergedTxn = Union[MergedTxn_ChaseTxn,
-                  MergedTxn_GoodbudgetTxn, MergedTxn_BothTxns]
+MergedTxn = Union[MergedTxn_ChaseTxn, MergedTxn_YnabTxn, MergedTxn_BothTxns]
 
 
 class BalanceDifferenceFrequency:
@@ -67,11 +87,11 @@ class BalanceDifferenceFrequency:
 
 
 class TxnsGrouped:
-    def __init__(self, only_ch_txns: List[ChaseTxn], only_gb_txns: List[GoodbudgetTxn],
+    def __init__(self, only_ch_txns: List[ChaseTxn], only_ynab_txns: List[YnabTxn],
                  both_txns: List[MergedTxn_BothTxns], merged_txns: List[MergedTxn],
                  bal_diff_freq: List[BalanceDifferenceFrequency]):
         self.only_ch_txns = only_ch_txns
-        self.only_gb_txns = only_gb_txns
+        self.only_ynab_txns = only_ynab_txns
         self.both_txns = both_txns
         self.merged_txns = merged_txns
         self.bal_diff_freq = bal_diff_freq

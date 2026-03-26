@@ -2,3 +2,8 @@ __pycache__/
 scraps
 *.env
 *.txt
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.DS_Store
