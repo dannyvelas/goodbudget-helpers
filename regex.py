@@ -1,13 +1,12 @@
 import re
 
-_CH_REGEX_STR = (r'(?P<deb_or_cred>DEBIT|CREDIT)'  # DEB_OR_CRED
-                 r',(?P<date>\d\d\/\d\d\/\d{4})'   # DATE
-                 r',(?P<title>"[^"]+")'            # TITLE
-                 r',(?P<amt>-?\d+\.\d\d)'          # AMT
-                 r',[A-Z_]+'                       # TYPE
-                 r',(?P<balance>-?\d+.\d\d| )'     # BALANCE
-                 r','                              # CHECK_OR_SPLIT_NUM
-                 r',')                             # TRAILING COMMA
+_CH_REGEX_STR = (r'(?P<date>\d\d\/\d\d\/\d{4})'        # Transaction Date
+                 r',\d\d\/\d\d\/\d{4}'                  # Post Date (skipped)
+                 r',(?P<description>"[^"]+"|[^,\n]+)'   # Description
+                 r',[^,\n]+'                             # Category (skipped)
+                 r',[^,\n]+'                             # Type (skipped)
+                 r',(?P<amt>-?\d+\.\d\d)'               # Amount
+                 r',.*')                             # TRAILING COMMA
 
 _GB_INCOME_REGEX_STR = (r'(?P<date>\d\d\/\d\d\/\d{4})'  # DATE
                         r',(?P<envelope>)'              # ENVELOPE

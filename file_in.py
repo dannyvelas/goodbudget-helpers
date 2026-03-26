@@ -33,15 +33,17 @@ def read_ch_txns(ch_start_bal: int) -> ReadResults[ChaseTxn]:
     lines_failed: List[str] = []
     with open(IN_CH_FILE) as in_file:
         for i, line in enumerate(in_file):
+            if i == 0:
+                continue
             if (txn := CH_REGEX.match(line)):
                 txn = txn.groupdict()
                 txns.append(ChaseTxn(
                     id_=i,
                     ts=int(dt.strptime(txn['date'], "%m/%d/%Y").timestamp()),
-                    is_debit=txn['deb_or_cred'] == 'DEBIT',
-                    is_pending=txn['balance'] == ' ',
+                    is_debit=float(txn['amt']) < 0,
+                    is_pending=False,
                     date=txn['date'],
-                    title=_shorten(txn['title']),
+                    title=_shorten(txn['description']),
                     amt_dollars=txn['amt']
                 ))
             else:
