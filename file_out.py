@@ -5,11 +5,11 @@ from typing import List
 from datatypes import (
     BalanceDifferenceFrequency,
     ChaseTxn,
-    GoodbudgetTxn,
     MergedTxn,
     MergedTxn_ChaseTxn,
-    MergedTxn_GoodbudgetTxn,
+    MergedTxn_YnabTxn,
     TxnsGrouped,
+    YnabTxn,
 )
 
 
@@ -22,15 +22,15 @@ def _ch_txn_to_row(ch_txn: ChaseTxn) -> str:
     return f'{ch_txn.id_},{ch_txn.date},{ch_txn.title},{ch_txn.amt_dollars},{ch_txn.bal/100}'
 
 
-_AMT_GB_FIELDS = 6
-_GB_FIELD_NAMES = 'Goodbudget ID,Goodbudget Date,Goodbudget Title,Goodbudget Envelope,Goodbudget Txn Amount,Goodbudget Balance'
+_AMT_YNAB_FIELDS = 6
+_YNAB_FIELD_NAMES = 'YNAB ID,YNAB Date,YNAB Title,YNAB Category,YNAB Txn Amount,YNAB Balance'
 
 
-def _gb_txn_to_row(gb_txn: GoodbudgetTxn) -> str:
-    return f'{gb_txn.id_},{gb_txn.date},{gb_txn.title},{gb_txn.envelope},{gb_txn.amt_dollars},{gb_txn.bal/100}'
+def _ynab_txn_to_row(ynab_txn: YnabTxn) -> str:
+    return f'{ynab_txn.id_},{ynab_txn.date},{ynab_txn.title},{ynab_txn.category},{ynab_txn.amt_dollars},{ynab_txn.bal/100}'
 
 
-_MERGED_TXN_FIELD_NAMES = f'Txn Type,{_CH_FIELD_NAMES},{_GB_FIELD_NAMES},Balance Difference'
+_MERGED_TXN_FIELD_NAMES = f'Txn Type,{_CH_FIELD_NAMES},{_YNAB_FIELD_NAMES},Balance Difference'
 
 
 def _merged_txn_to_row(merged_txn: MergedTxn) -> str:
@@ -38,17 +38,17 @@ def _merged_txn_to_row(merged_txn: MergedTxn) -> str:
 
     if isinstance(merged_txn, MergedTxn_ChaseTxn):
         txn_type = 'CHASE'
-        gb_row = ',' * (_AMT_GB_FIELDS - 1)
+        ynab_row = ',' * (_AMT_YNAB_FIELDS - 1)
     else:
-        gb_row = _gb_txn_to_row(merged_txn.gb_txn)
+        ynab_row = _ynab_txn_to_row(merged_txn.ynab_txn)
 
-    if isinstance(merged_txn, MergedTxn_GoodbudgetTxn):
-        txn_type = 'GOODBUDGET'
+    if isinstance(merged_txn, MergedTxn_YnabTxn):
+        txn_type = 'YNAB'
         ch_row = ',' * (_AMT_CH_FIELDS - 1)
     else:
         ch_row = _ch_txn_to_row(merged_txn.ch_txn)
 
-    return ','.join([txn_type, ch_row, gb_row, str(merged_txn.bal_diff/100)])
+    return ','.join([txn_type, ch_row, ynab_row, str(merged_txn.bal_diff/100)])
 
 
 def _bal_and_freq_to_row(bal_and_freq: BalanceDifferenceFrequency) -> str:
@@ -65,7 +65,7 @@ class Logger:
         Path(OUT_DIR).mkdir(exist_ok=True)
 
         self.ch_file = f'{OUT_DIR}/chase.csv'
-        self.gb_file = f'{OUT_DIR}/goodbudget.csv'
+        self.ynab_file = f'{OUT_DIR}/ynab.csv'
         self.both_file = f'{OUT_DIR}/both.csv'
         self.merged_file = f'{OUT_DIR}/merged.csv'
         self.bal_diff_freq_file = f'{OUT_DIR}/bal_diff_freq.csv'
@@ -84,7 +84,7 @@ class Logger:
             out_file.write(
                 f'AMT OF UNMATCHED CHASE TXNS: {len(txns_grouped.only_ch_txns)}\n')
             out_file.write(
-                f'AMT OF UNMATCHED GOODBUDGET TXNS: {len(txns_grouped.only_gb_txns)}\n')
+                f'AMT OF UNMATCHED YNAB TXNS: {len(txns_grouped.only_ynab_txns)}\n')
             out_file.write(
                 f'AMT OF MATCHED TXNS: {len(txns_grouped.both_txns)}\n')
 
@@ -94,10 +94,10 @@ class Logger:
             for txn in txns_grouped.only_ch_txns:
                 out_file.write(f"{_ch_txn_to_row(txn)}\n")
 
-        with open(self.gb_file, 'w') as out_file:
-            out_file.write(f'{_GB_FIELD_NAMES}\n')
-            for txn in txns_grouped.only_gb_txns:
-                out_file.write(f"{_gb_txn_to_row(txn)}\n")
+        with open(self.ynab_file, 'w') as out_file:
+            out_file.write(f'{_YNAB_FIELD_NAMES}\n')
+            for txn in txns_grouped.only_ynab_txns:
+                out_file.write(f"{_ynab_txn_to_row(txn)}\n")
 
         with open(self.both_file, 'w') as out_file:
             out_file.write(f'{_MERGED_TXN_FIELD_NAMES}\n')

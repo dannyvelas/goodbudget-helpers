@@ -10,6 +10,8 @@ Auto-generated from all feature plans. Last updated: 2026-03-26
 - CSV files at `./in/chase.csv` and `./in/ynab.csv` (004-csv-reader-parsers)
 - Python 3.14.3 (system), venv at `.venv/` + `pytest 9.0.2` (test-only); `datatypes`, `match` (stdlib) (005-match-ynab-tests)
 - N/A — tests construct objects directly, no file I/O (005-match-ynab-tests)
+- Python 3.14.3 (system), venv at `.venv/` + `pytest 9.0.2` (test-only); `datatypes`, `file_out` (stdlib) (006-file-out-ynab)
+- Output files under `./out/<timestamp>/` (CSV + log.txt) (006-file-out-ynab)
 
 - Python 3 + pytest (001-ynab-datatype-migration)
 
@@ -29,9 +31,9 @@ python3 -m pytest
 Python 3: Follow standard conventions
 
 ## Recent Changes
+- 006-file-out-ynab: Added Python 3.14.3 (system), venv at `.venv/` + `pytest 9.0.2` (test-only); `datatypes`, `file_out` (stdlib)
 - 005-match-ynab-tests: Added Python 3.14.3 (system), venv at `.venv/` + `pytest 9.0.2` (test-only); `datatypes`, `match` (stdlib)
 - 004-csv-reader-parsers: Added Python 3.14.3 (system), venv at `.venv/` + `csv` (stdlib), `datetime` (stdlib), `pytest 9.0.2` (test-only)
-- 003-ynab-parser: Added Python 3.14.3 (system), venv at `.venv/` + `re` (stdlib), `datetime` (stdlib), `pytest 9.0.2` (test-only)
 
 
 <!-- MANUAL ADDITIONS START -->
