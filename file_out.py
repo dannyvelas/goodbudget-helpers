@@ -62,7 +62,7 @@ OUT_DIR = f'./out/{dt.now().strftime("%Y-%m-%dT%H:%M")}'
 
 class Logger:
     def __init__(self):
-        Path(OUT_DIR).mkdir(exist_ok=True)
+        Path(OUT_DIR).mkdir(parents=True, exist_ok=True)
 
         self.ch_file = f'{OUT_DIR}/chase.csv'
         self.ynab_file = f'{OUT_DIR}/ynab.csv'
