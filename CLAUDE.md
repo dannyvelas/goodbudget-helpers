@@ -6,6 +6,8 @@ Auto-generated from all feature plans. Last updated: 2026-03-26
 - Python 3 + pytest, re (stdlib) (002-update-chase-regex)
 - Python 3.14.3 (system), venv at `.venv/` + `re` (stdlib), `datetime` (stdlib), `pytest 9.0.2` (test-only) (003-ynab-parser)
 - CSV file at `./in/ynab.csv` (003-ynab-parser)
+- Python 3.14.3 (system), venv at `.venv/` + `csv` (stdlib), `datetime` (stdlib), `pytest 9.0.2` (test-only) (004-csv-reader-parsers)
+- CSV files at `./in/chase.csv` and `./in/ynab.csv` (004-csv-reader-parsers)
 
 - Python 3 + pytest (001-ynab-datatype-migration)
 
@@ -25,10 +27,10 @@ python3 -m pytest
 Python 3: Follow standard conventions
 
 ## Recent Changes
+- 004-csv-reader-parsers: Added Python 3.14.3 (system), venv at `.venv/` + `csv` (stdlib), `datetime` (stdlib), `pytest 9.0.2` (test-only)
 - 003-ynab-parser: Added Python 3.14.3 (system), venv at `.venv/` + `re` (stdlib), `datetime` (stdlib), `pytest 9.0.2` (test-only)
 - 002-update-chase-regex: Added Python 3 + pytest, re (stdlib)
 
-- 001-ynab-datatype-migration: Added Python 3 + pytest
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
