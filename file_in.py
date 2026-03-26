@@ -2,11 +2,11 @@ from datetime import datetime as dt
 import re
 from typing import Generic, List, TypeVar
 
-from datatypes import ChaseTxn, GoodbudgetTxn
-from regex import CH_REGEX, GB_EXPENSE_REGEX, GB_INCOME_REGEX
+from datatypes import ChaseTxn, YnabTxn
+from regex import CH_REGEX, YNAB_REGEX
 
 IN_CH_FILE = './in/chase.csv'
-IN_GB_FILE = './in/goodbudget.csv'
+IN_YNAB_FILE = './in/ynab.csv'
 
 
 def _shorten(s: str) -> str:
@@ -19,7 +19,7 @@ def _shorten(s: str) -> str:
     return s
 
 
-T = TypeVar('T', ChaseTxn, GoodbudgetTxn)
+T = TypeVar('T', ChaseTxn, YnabTxn)
 
 
 class ReadResults(Generic[T]):
@@ -57,27 +57,36 @@ def read_ch_txns(ch_start_bal: int) -> ReadResults[ChaseTxn]:
     return ReadResults(txns, lines_failed)
 
 
-def read_gb_txns(gb_start_bal: int) -> ReadResults[GoodbudgetTxn]:
-    txns: List[GoodbudgetTxn] = []
+def read_ynab_txns(ynab_start_bal: int) -> ReadResults[YnabTxn]:
+    txns: List[YnabTxn] = []
     lines_failed: List[str] = []
-    with open(IN_GB_FILE) as in_file:
+    with open(IN_YNAB_FILE, encoding='utf-8-sig') as in_file:
         for i, line in enumerate(in_file):
-            if (txn := GB_EXPENSE_REGEX.match(line)) or (txn := GB_INCOME_REGEX.match(line)):
+            if i == 0:
+                continue
+            if (txn := YNAB_REGEX.match(line)):
                 txn = txn.groupdict()
-                txns.append(GoodbudgetTxn(
+                outflow_val = float(txn['outflow'])
+                inflow_val = float(txn['inflow'])
+                if outflow_val > 0.0:
+                    amt_dollars = f"-{txn['outflow']}"
+                elif inflow_val > 0.0:
+                    amt_dollars = txn['inflow']
+                else:
+                    amt_dollars = '0.00'
+                txns.append(YnabTxn(
                     id_=i,
                     ts=int(dt.strptime(txn['date'], "%m/%d/%Y").timestamp()),
                     date=txn['date'],
-                    title=_shorten(txn['title']),
-                    envelope=(txn['envelope'] if txn['envelope']
-                              != '' else 'Income'),
-                    amt_dollars=txn['amt'],
-                    notes=txn['notes']
+                    title=_shorten(txn['payee']),
+                    category=txn['category'],
+                    amt_dollars=amt_dollars,
+                    cleared=txn['cleared']
                 ))
             else:
                 lines_failed.append(line)
 
-    curr_bal = gb_start_bal
+    curr_bal = ynab_start_bal
     for txn in reversed(txns):
         curr_bal += txn.amt_cents
         txn.bal = curr_bal

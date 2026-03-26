@@ -8,27 +8,17 @@ _CH_REGEX_STR = (r'(?P<date>\d\d\/\d\d\/\d{4})'        # Transaction Date
                  r',(?P<amt>-?\d+\.\d\d)'               # Amount
                  r',.*')                             # TRAILING COMMA
 
-_GB_INCOME_REGEX_STR = (r'(?P<date>\d\d\/\d\d\/\d{4})'  # DATE
-                        r',(?P<envelope>)'              # ENVELOPE
-                        r',"Chase Account"'             # ACCOUNT
-                        r',(?P<title>"[^"]+"|[^,]+)'    # TITLE
-                        r',(?P<notes>"[^"]+"|[^,]*)'    # NOTES
-                        r','                            # CHECK_NUM
-                        r',(?P<amt>"[^"]+"|[^,]+)'      # AMT
-                        r',(CLR)?'                      # STATUS
-                        r',("[^"]+"|[^\n]+)')           # DETAILS
-
-_GB_EXPENSE_REGEX_STR = (r'(?P<date>\d\d\/\d\d\/\d{4})'  # DATE
-                         # ENVELOPE
-                         r',(?P<envelope>"[^"]+"|[A-Za-z]+|\[Unallocated\])'
-                         r',"Chase Account"'             # ACCOUNT
-                         r',(?P<title>"[^"]+"|[^,]+)'    # TITLE
-                         r',(?P<notes>"[^"]+"|[^,]*)'    # NOTES
-                         r','                            # CHECK_NUM
-                         r',(?P<amt>"[^"]+"|[^,]+)'      # AMT
-                         r',(CLR)?'                      # STATUS
-                         r',')                           # DETAILS
+_YNAB_REGEX_STR = (r'"[^"]*"'                           # Account (col 0, skip)
+                   r',"[^"]*"'                          # Flag (col 1, skip)
+                   r',"(?P<date>[^"]+)"'                # Date (col 2)
+                   r',"(?P<payee>[^"]*)"'               # Payee (col 3)
+                   r',"[^"]*"'                          # Category Group/Category (col 4, skip)
+                   r',"[^"]*"'                          # Category Group (col 5, skip)
+                   r',"(?P<category>[^"]*)"'            # Category (col 6, deepest)
+                   r',"[^"]*"'                          # Memo (col 7, skip)
+                   r',\$(?P<outflow>\d+\.\d\d)'         # Outflow (col 8, $ stripped)
+                   r',\$(?P<inflow>\d+\.\d\d)'          # Inflow (col 9, $ stripped)
+                   r',"(?P<cleared>[^"]+)"')             # Cleared (col 10)
 
 CH_REGEX = re.compile(_CH_REGEX_STR)
-GB_INCOME_REGEX = re.compile(_GB_INCOME_REGEX_STR)
-GB_EXPENSE_REGEX = re.compile(_GB_EXPENSE_REGEX_STR)
+YNAB_REGEX = re.compile(_YNAB_REGEX_STR)
